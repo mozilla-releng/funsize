@@ -2,11 +2,13 @@
 
 set -xe
 
-ART_DIR=/home/worker/artifacts
-env
-mount
-df -h
-echo "I will create some artifacts in $ART_DIR"
+test $FROM_MAR
+test $TO_MAR
 
-mkdir -p $ART_DIR
-env > $ART_DIR/env.txt
+ARTIFACTS_DIR=/home/worker/artifacts
+mkdir -p $ARTIFACTS_DIR
+
+/home/worker/bin/funsize.py \
+    --artifacts-dir $ARTIFACTS_DIR \
+    --from-mar $FROM_MAR \
+    --to-mar $TO_MAR

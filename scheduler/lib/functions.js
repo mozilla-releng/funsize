@@ -8,8 +8,8 @@ var config = require('../config/rail');
 var interestingMessage = function (message){
   var routingKey = message.routingKey;
   var patterns = [
+    // TODO: include en-US builds, chunked l10n
     /build\.mozilla-(central|aurora)-.+-l10n-nightly\..+\.finished/,
-    /build\..+asan.+\.finished/,
   ];
   return patterns.some(function(pattern){
     return pattern.test(routingKey);
@@ -38,14 +38,10 @@ var processMessage = function(message, scheduler){
   //console.log(props.platform, props.completeMarUrl, props.completeMarHash,
   //            props.branch);
   var data = {
-    toMarURL: props.completeMarUrl,
-    toMarHash: props.completeMarHash,
+    toMarURL: 'tbd',
     fromMarURL: 'TBD', // get from balrog
-    fromMarHash: 'TBD', // get from balrog
-    productVersion: props.appVersion,
-    channelID: props.branch,
-    revision: props.fx_revision,
-    repo: 'tbd'
+    platform: 'TODO',
+    locale: 'TODO',
   };
   triggerFunsizeTask(data, scheduler);
 };
@@ -53,7 +49,7 @@ var processMessage = function(message, scheduler){
 var triggerFunsizeTask = function(data, scheduler){
   var tasks1 = createTaskDefinition(data);
   var task1Id = slugid.v4();
-  var tasks2 = createTaskDefinition(data);
+  var tasks2 = createTaskDefinition(data, {PARENT_TASK_ID: task1Id});
   var task2Id = slugid.v4();
   var tasks ={
     tasks: [
@@ -83,7 +79,7 @@ var triggerFunsizeTask = function(data, scheduler){
   console.log("done");
 };
 
-var createTaskDefinition = function(data){
+var createTaskDefinition = function(data, env){
 
   //var schema = Joi.object.keys({
     //toMarURL: Joi.string().required(),
@@ -108,16 +104,19 @@ var createTaskDefinition = function(data){
 
    },
    env: {
-     'TO_MAR_URL': data.toMarURL,
-     'TO_MAR_HASH': data.toMarHash,
-     'FROM_MAR_URL': data.fromMarURL,
-     'FROM_MAR_HASH': data.fromMarHash,
-     'PRODUCT_VERSION': data.productVersion,
-     'CHANNEL_ID': data.channelID,
-     'REPO': data.repo,
-     'REVISION': data.revision,
+     'TO_MAR': data.toMarURL,
+     'FROM_MAR': data.fromMarURL,
+     'PLATFORM': data.platform,
+     'LOCALE': data.locale,
    }
   };
+  if (env) {
+    for (var k in env) {
+      if (env.hasOwnProperty(k)) {
+        payload.env[k] = env[k];
+      }
+    }
+  }
   var taskDef = {
     provisionerId: "aws-provisioner",
     workerType: config.worker.workerType,
@@ -128,7 +127,7 @@ var createTaskDefinition = function(data){
       name: "Funsize update generator task",
       description: "Funsize update generator task",
       owner: "release+funsize@mozilla.com",
-      source: "https://github.com/mozilla/funsize-node",
+      source: "https://github.com/mozilla/funsize-taskcluster",
     }
   };
   return taskDef;
