@@ -1,0 +1,14 @@
+{
+  "name": "taskcluster-pulse",
+  "version": "0.0.1",
+  "author": "Rail Aliiev <rail@mozilla.com>",
+  "description": "Taskcluster Pulse listener",
+  "license": "MPL-2.0",
+  "dependencies": {
+    "amqplib": "^0.3.0",
+    "joi": "^5.1.0",
+    "promise": "^6.1.0",
+    "slugid": "^1.0.3",
+    "taskcluster-client": "git://github.com/taskcluster/taskcluster-client"
+  }
+}
