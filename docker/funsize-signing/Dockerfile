@@ -3,7 +3,7 @@ MAINTAINER Rail Aliiev <rail@mozilla.com>
 
 # Required software
 ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get update -q && apt-get install -yyq python python-pip
+RUN apt-get update -q && apt-get install -yyq python python-pip wget
 RUN useradd -d /home/worker -s /bin/bash -m worker
 COPY requirements.txt /tmp/
 RUN pip install -r /tmp/requirements.txt
