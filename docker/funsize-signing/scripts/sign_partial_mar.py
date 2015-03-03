@@ -40,7 +40,7 @@ def main():
     # TODO: do the signing
     # TODO: update the manifest with size/hash
     manifest["signed"] = True
-    with open(os.path.join(args.artifacts_dir, "manifest.json")) as f:
+    with open(os.path.join(args.artifacts_dir, "manifest.json"), "w") as f:
         json.dump(manifest, f, indent=2, sort_keys=True)
     shutil.copy(mar_dest, args.artifacts_dir)
     shutil.rmtree(workdir)
