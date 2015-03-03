@@ -133,10 +133,11 @@ def main():
     parser.add_argument("--from-mar", required=True)
     parser.add_argument("--to-mar", required=True)
     parser.add_argument("--artifacts-dir", required=True)
-    parser.add_argument("--branch")
-    parser.add_argument("--platform")
-    parser.add_argument("--locale")
+    parser.add_argument("--platform", required=True,
+                        help="Buildbot platform name")
+    parser.add_argument("--locale", required=True)
     parser.add_argument("--workdir")
+    parser.add_argument("--branch")
     parser.add_argument("-q", "--quiet", dest="log_level",
                         action="store_const", const=logging.WARNING,
                         default=logging.DEBUG)

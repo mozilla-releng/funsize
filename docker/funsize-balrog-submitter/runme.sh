@@ -1,15 +1,14 @@
-#!/bin/sh
+#!/bin/bash
 
 set -xe
 
 test $PARENT_TASK_ARTIFACTS_URL_PREFIX
-
-ARTIFACTS_DIR="/home/worker/artifacts"
-mkdir -p "$ARTIFACTS_DIR"
+test $BALROG_API_ROOT
 
 wget -O /home/worker/manifest.json "$PARENT_TASK_ARTIFACTS_URL_PREFIX/manifest.json"
-
-/home/worker/bin/sign_partial_mar.py \
+python ~/tools/scripts/updates/funsize-balrog-submitter.py \
     --artifacts-url-prefix "$PARENT_TASK_ARTIFACTS_URL_PREFIX" \
     --manifest /home/worker/manifest.json \
-    --artifacts-dir "$ARTIFACTS_DIR"
+    -a "$BALROG_API_ROOT" \
+    --dummy \
+    --verbose
