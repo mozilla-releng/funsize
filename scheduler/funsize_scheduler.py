@@ -1,5 +1,6 @@
 import argparse
 import datetime
+import logging
 import re
 import requests
 import taskcluster
@@ -10,7 +11,7 @@ from release.platforms import buildbot2updatePlatforms
 from mozillapulse.config import PulseConfiguration
 from mozillapulse.consumers import BuildConsumer
 
-# TODO: add logging (to file too?)
+log = logging.getLogger(__name__)
 
 
 class BalrogClient(object):
@@ -22,7 +23,8 @@ class BalrogClient(object):
 
     def get_releases(self, product, branch=None, version=None, limit=2,
                      include_latest=False, reverse=True):
-        # Params will be working after Bug 1137367 is deployed
+        # TODO: Params will be working after Bug 1137367 is deployed
+        # TODO: switch to names_only when filtering
         url = "{}/releases".format(self.api_root)
         params = {"product": product}
         if branch:
@@ -30,7 +32,6 @@ class BalrogClient(object):
         if version:
             params["version"] = version
 
-        # TODO: switch to names_only when filtering
         req = requests.get(url, auth=self.auth, verify=self.CA_BUNDLE,
                            params=params)
         releases = req.json()["releases"]
@@ -176,48 +177,73 @@ def create_task_graph(platform, locale, from_mar, to_mar, secrets):
     }
     graph_id = slugId()
     scheduler = taskcluster.Scheduler(secrets["taskcluster"])
-    print "about to create a graph", graph_id
+    log.debug("Task graph: %s", task_graph)
+    log.info("Submitting task graph %s", graph_id)
     res = scheduler.createTaskGraph(graph_id, task_graph)
-    print res
+    log.debug("Result was: %s", res)
 
 
 def interesting_buildername(buildername):
     # TODO: update the list with real patterns
     interesting_names = [
-        r"en us nightly build",
-        r"l10n nightly repack",
+        r"WINNT \d+\.\d+ (x86-64 )?mozilla-(central|aurora) nightly",
+        r"Linux (x86-64 )?mozilla-(central|aurora) nightly",
+        r"OS X \d+\.\d+ mozilla-(central|aurora) nightly",
+        r"Firefox mozilla-(central|aurora) (linux|linux64|win32|win64|mac) l10n nightly",
+        r"Thunderbird comm-central win32 l10n nightly",
     ]
+
     return any(re.match(n, buildername) for n in interesting_names)
 
 
 def process_message(data, message, balrog_client):
     try:
         do_process_message(data, balrog_client)
+    except Exception:
+        log.exception("Cought an error")
     finally:
         message.ack()
+
+
+def get_properties_dict(props):
+    """Convert properties tuple into dict"""
+    props_dict = {}
+    for prop in props:
+        props_dict[prop[0]] = prop[1]
+    return props_dict
 
 
 def do_process_message(data, balrog_client):
     buildername = data["payload"]["build"]["builderName"]
     properties = data["payload"]["build"]["properties"]
+    properties = get_properties_dict(properties)
     result = data["payload"]["results"]
     if result != 0:
+        # log.debug("Ignoring %s with result %s", buildername, result)
         return
     if not interesting_buildername(buildername):
+        # log.debug("Ignoring %s: not interested", buildername)
         return
-    locale = properties["locale"]
+    locale = properties.get("locale", "en-US")
     platform = properties["platform"]
     branch = properties["branch"]
-    product = properties["product"]  # check Firefox B2G
+    product = properties["appName"]  # check Firefox B2G
     update_platform = buildbot2updatePlatforms(platform)[0]
 
     release_to, release_from = balrog_client.get_releases(product, branch)
+    log.debug("From: %s", release_from)
+    log.debug("To: %s", release_to)
     build_from = balrog_client.get_build(release_from["name"],
                                          update_platform, locale)
+    log.debug("Build from: %s", build_from)
     build_to = balrog_client.get_build(release_to["name"], update_platform,
                                        locale)
-    create_task_graph(platform, locale, build_from["completes"][0]["fileUrl"],
-                      build_to["completes"][0]["fileUrl"], secrets)
+    log.debug("Build to: %s", build_to)
+    mar_from = build_from["completes"][0]["fileUrl"]
+    mar_to = build_to["completes"][0]["fileUrl"]
+    log.info("New Funsize task for %s %s, from %s to %s", platform, locale,
+             mar_from, mar_to)
+    create_task_graph(platform, locale, mar_from, mar_to, secrets)
 
 
 def main(api_root, secrets):
@@ -228,6 +254,7 @@ def main(api_root, secrets):
     pulse.config = PulseConfiguration(user=pulse_credentials["user"],
                                       password=pulse_credentials["password"])
     # TODO: use durable queues in production
+    log.info("Listening for pulse messages")
     pulse.configure(
         topic="build.#.finished",
         callback=lambda d, m: process_message(d, m, balrog_client))
@@ -240,8 +267,13 @@ if __name__ == '__main__':
     parser.add_argument("--secrets", required=True, type=argparse.FileType())
     parser.add_argument("--balrog-api-root",
                         default="https://aus4-admin.mozilla.org/api")
+    parser.add_argument("-v", "--verbose", dest="log_level",
+                        action="store_const", const=logging.DEBUG,
+                        default=logging.INFO)
     args = parser.parse_args()
+    logging.basicConfig(level=args.log_level,
+                        format="%(asctime)s - %(message)s")
     secrets = yaml.safe_load(args.secrets)
     main(args.balrog_api_root, secrets)
 
-# TODO: encrypt credentials
+# TODO: encrypt credentials for the balrog task

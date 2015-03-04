@@ -7,6 +7,7 @@ RUN apt-get update -q && apt-get install -yyq python python-pip wget
 RUN useradd -d /home/worker -s /bin/bash -m worker
 COPY requirements.txt /tmp/
 RUN pip install -r /tmp/requirements.txt
+RUN rm -f /tmp/requirements.txt
 
 # scripts
 RUN mkdir /home/worker/bin

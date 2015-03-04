@@ -7,7 +7,7 @@ test $BALROG_API_ROOT
 
 wget -O /home/worker/manifest.json "$PARENT_TASK_ARTIFACTS_URL_PREFIX/manifest.json"
 cat /home/worker/manifest.json
-python ~/tools/scripts/updates/funsize-balrog-submitter.py \
+python /home/worker/bin/funsize-balrog-submitter.py \
     --artifacts-url-prefix "$PARENT_TASK_ARTIFACTS_URL_PREFIX" \
     --manifest /home/worker/manifest.json \
     -a "$BALROG_API_ROOT" \

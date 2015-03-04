@@ -7,6 +7,9 @@ RUN apt-get update -q && apt-get install -yyq python python-pip
 RUN useradd -d /home/worker -s /bin/bash -m worker
 COPY requirements.txt /tmp/
 RUN pip install -r /tmp/requirements.txt
+# cleanup
+RUN apt-get purge -y python-pip && apt-get autoremove -y
+RUN rm -f /tmp/requirements.txt
 
 # scripts
 RUN mkdir /home/worker/bin
