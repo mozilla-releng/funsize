@@ -109,6 +109,7 @@ class WorkEnv(object):
             download(url, dest=os.path.join(self.workdir, f), mode=0o755)
 
     def download_martools(self):
+        # TODO: check if the tools have to be branch specific
         prefix = "https://ftp.mozilla.org/pub/mozilla.org/firefox/nightly/" \
             "latest-mozilla-central/mar-tools/linux64"
         for f in ("mar", "mbsdiff"):
@@ -168,9 +169,10 @@ def main():
                                    section="App", option="BuildID"),
         "appName": get_option(from_path, filename="application.ini",
                               section="App", option="Name"),
-        "repo": get_option(path, filename="application.ini", section="App",
+        # Use Gecko repo and revision from platform.ini, not application.ini
+        "repo": get_option(path, filename="platform.ini", section="Build",
                            option="SourceRepository"),
-        "revision": get_option(path, filename="application.ini", section="App",
+        "revision": get_option(path, filename="platform.ini", section="Build",
                                option="SourceStamp"),
         "from_mar": args.from_mar,
         "to_mar": args.to_mar,

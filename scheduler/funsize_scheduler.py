@@ -34,6 +34,7 @@ class BalrogClient(object):
 
         req = requests.get(url, auth=self.auth, verify=self.CA_BUNDLE,
                            params=params)
+        req.raise_for_status()
         releases = req.json()["releases"]
         releases = self.legacy_filter(releases, product, branch, version)
         if not include_latest:
@@ -58,6 +59,8 @@ class BalrogClient(object):
         url = "{}/releases/{}/builds/{}/{}".format(self.api_root, release,
                                                    platform, locale)
         req = requests.get(url, auth=self.auth, verify=self.CA_BUNDLE)
+        # TODO: report if build is 404
+        req.raise_for_status()
         return req.json()
 
 
@@ -180,19 +183,25 @@ def create_task_graph(platform, locale, from_mar, to_mar, secrets):
     log.debug("Task graph: %s", task_graph)
     log.info("Submitting task graph %s", graph_id)
     res = scheduler.createTaskGraph(graph_id, task_graph)
-    log.debug("Result was: %s", res)
+    log.info("Result was: %s", res)
 
 
 def interesting_buildername(buildername):
-    # TODO: update the list with real patterns
-    interesting_names = [
-        r"WINNT \d+\.\d+ (x86-64 )?mozilla-(central|aurora) nightly",
-        r"Linux (x86-64 )?mozilla-(central|aurora) nightly",
-        r"OS X \d+\.\d+ mozilla-(central|aurora) nightly",
-        r"Firefox mozilla-(central|aurora) (linux|linux64|win32|win64|mac) l10n nightly",
-        r"Thunderbird comm-central win32 l10n nightly",
+    branches = [
+        "mozilla-central",
+        "mozilla-aurora",
+        # "comm-central",
+        # "comm-aurora",
     ]
-
+    builders = [
+        r"WINNT \d+\.\d+ (x86-64 )?{branch} nightly",
+        r"Linux (x86-64 )?{branch} nightly",
+        r"OS X \d+\.\d+ {branch} nightly",
+        r"(Thunderbird|Firefox) {branch} (linux|linux64|win32|win64|mac)"
+        " l10n nightly",
+    ]
+    interesting_names = [n.format(branch=b) for b in branches for n in
+                         builders]
     return any(re.match(n, buildername) for n in interesting_names)
 
 
@@ -230,7 +239,10 @@ def do_process_message(data, balrog_client):
     product = properties["appName"]  # check Firefox B2G
     update_platform = buildbot2updatePlatforms(platform)[0]
 
-    release_to, release_from = balrog_client.get_releases(product, branch)
+    # Get last 3 releases, generate partial from -2 to latest
+    last_releases = balrog_client.get_releases(product, branch, limit=3)
+    release_to = last_releases[0]
+    release_from = last_releases[-1]
     log.debug("From: %s", release_from)
     log.debug("To: %s", release_to)
     build_from = balrog_client.get_build(release_from["name"],
@@ -271,8 +283,11 @@ if __name__ == '__main__':
                         action="store_const", const=logging.DEBUG,
                         default=logging.INFO)
     args = parser.parse_args()
-    logging.basicConfig(level=args.log_level,
-                        format="%(asctime)s - %(message)s")
+    logging.basicConfig(
+        level=args.log_level,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    logging.getLogger("requests").setLevel(logging.WARN)
+    logging.getLogger("taskcluster").setLevel(logging.WARN)
     secrets = yaml.safe_load(args.secrets)
     main(args.balrog_api_root, secrets)
 
