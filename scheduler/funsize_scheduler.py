@@ -1,12 +1,18 @@
 import argparse
+import base64
 import datetime
+import iso8601
+import json
 import logging
+import os
 import re
 import requests
 import taskcluster
 import yaml
+import gnupg
+import time
 
-from taskcluster.utils import slugId, fromNow
+from taskcluster.utils import slugId, fromNow, stringDate
 from release.platforms import buildbot2updatePlatforms
 from mozillapulse.config import PulseConfiguration
 from mozillapulse.consumers import BuildConsumer
@@ -64,11 +70,46 @@ class BalrogClient(object):
         return req.json()
 
 
+def setup_gnupg():
+    home = os.getcwd()
+    gpg = gnupg.GPG(gnupghome=home)
+    gpg.import_keys(open("docker-worker-pub.pem").read())
+
+
+def iso_to_ms(iso_dt):
+    dt = iso8601.parse_date(iso_dt)
+    # Convert second to ms
+    return int(time.mktime(dt.timetuple()) * 1000)
+
+
+def encrypt_env_var(task_id, start_time, end_time, name, value):
+    start_time = iso_to_ms(start_time)
+    end_time = iso_to_ms(end_time)
+    message = {
+        "messageVersion": "1",
+        "taskId": task_id,
+        "startTime": start_time,
+        "endTime": end_time,
+        "name": name,
+        "value": value
+    }
+    message = str(json.dumps(message))
+    # TODO: move to a separate directory
+    home = os.getcwd()
+    gpg = gnupg.GPG(gnupghome=home)
+    tc_docker_fingerprint = "725742D8A7CED276999E52152A1FA0553A13C34A"
+    res = gpg.encrypt(message, tc_docker_fingerprint, always_trust=True,
+                      armor=False)
+    return base64.b64encode(res.data)
+
+
 def create_task_graph(platform, locale, from_mar, to_mar, secrets):
     task_1_id = slugId()
     task_2_id = slugId()
     task_3_id = slugId()
-    now = datetime.datetime.utcnow()
+    now = stringDate(datetime.datetime.utcnow())
+    deadline = fromNow('2h')
+    artifacts_expire = fromNow('7d')
     # TODO: move the graph to a yaml template
     task_graph = {
         "scopes": ['queue:*', 'docker-worker:*', 'scheduler:*'],
@@ -80,7 +121,7 @@ def create_task_graph(platform, locale, from_mar, to_mar, secrets):
                     "provisionerId": "aws-provisioner",
                     "workerType": "b2gtest",
                     "created": now,
-                    "deadline": fromNow('1h'),
+                    "deadline": deadline,
                     "payload": {
                         "image": "rail/funsize-update-generator",
                         "command": ["/runme.sh"],
@@ -89,7 +130,7 @@ def create_task_graph(platform, locale, from_mar, to_mar, secrets):
                             "public/env": {
                                 "path": "/home/worker/artifacts/",
                                 "type": "directory",
-                                "expires": fromNow('1h')
+                                "expires": artifacts_expire,
                             }
                         },
                         "env": {
@@ -114,7 +155,7 @@ def create_task_graph(platform, locale, from_mar, to_mar, secrets):
                     "provisionerId": "aws-provisioner",
                     "workerType": "b2gtest",
                     "created": now,
-                    "deadline": fromNow('1h'),
+                    "deadline": deadline,
                     "payload": {
                         "image": "rail/funsize-signer",
                         "command": ["/runme.sh"],
@@ -123,7 +164,7 @@ def create_task_graph(platform, locale, from_mar, to_mar, secrets):
                             "public/env": {
                                 "path": "/home/worker/artifacts/",
                                 "type": "directory",
-                                "expires": fromNow('1h'),
+                                "expires": artifacts_expire,
                             }
                         },
                         "env": {
@@ -147,7 +188,7 @@ def create_task_graph(platform, locale, from_mar, to_mar, secrets):
                     "provisionerId": "aws-provisioner",
                     "workerType": "b2gtest",
                     "created": now,
-                    "deadline": fromNow('1h'),
+                    "deadline": deadline,
                     "payload": {
                         "image": "rail/funsize-balrog-submitter",
                         "command": ["/runme.sh"],
@@ -158,9 +199,17 @@ def create_task_graph(platform, locale, from_mar, to_mar, secrets):
                                 task_2_id + "/artifacts/public/env",
                             "BALROG_API_ROOT":
                                 "https://aus4-admin-dev.allizom.org/api",
-                            "BALROG_USERNAME": "TO_BE_ENCRYPTED",
-                            "BALROG_PASSWORD": "TO_BE_ENCRYPTED",
-                        }
+                        },
+                        "encryptedEnv": [
+                            encrypt_env_var(task_id=task_3_id, start_time=now,
+                                            end_time=deadline,
+                                            name="BALROG_USERNAME",
+                                            value=secrets["balrog_username"]),
+                            encrypt_env_var(task_id=task_3_id, start_time=now,
+                                            end_time=deadline,
+                                            name="BALROG_PASSWORD",
+                                            value=secrets["balrog_password"]),
+                        ],
                     },
                     "metadata": {
                         "name": "Funsize balrog submitter task",
@@ -190,8 +239,8 @@ def interesting_buildername(buildername):
     branches = [
         "mozilla-central",
         "mozilla-aurora",
-        # "comm-central",
-        # "comm-aurora",
+        "comm-central",
+        "comm-aurora",
     ]
     builders = [
         r"WINNT \d+\.\d+ (x86-64 )?{branch} nightly",
@@ -265,6 +314,7 @@ def main(api_root, secrets):
     pulse = BuildConsumer(applabel='funsize', connect=False)
     pulse.config = PulseConfiguration(user=pulse_credentials["user"],
                                       password=pulse_credentials["password"])
+    setup_gnupg()
     # TODO: use durable queues in production
     log.info("Listening for pulse messages")
     pulse.configure(
