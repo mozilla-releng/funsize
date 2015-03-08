@@ -4,6 +4,13 @@ import os
 import logging
 import argparse
 import json
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__),
+                "/home/worker/tools/lib/python/vendor/requests-0.10.8"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__),
+                "/home/worker/tools/lib/python"))
+
 from balrog.submitter.cli import NightlySubmitterV4
 
 

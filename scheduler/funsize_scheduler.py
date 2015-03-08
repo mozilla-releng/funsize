@@ -1,16 +1,14 @@
 import argparse
-import base64
 import datetime
-import iso8601
 import json
 import logging
-import os
 import re
 import requests
 import taskcluster
 import yaml
-import gnupg
 import time
+import sh
+import base64
 
 from taskcluster.utils import slugId, fromNow, stringDate
 from release.platforms import buildbot2updatePlatforms
@@ -27,9 +25,8 @@ class BalrogClient(object):
         self.api_root = api_root
         self.auth = auth
 
-    def get_releases(self, product, branch=None, version=None, limit=2,
+    def get_releases(self, product, branch, version=None, limit=2,
                      include_latest=False, reverse=True):
-        # TODO: Params will be working after Bug 1137367 is deployed
         # TODO: switch to names_only when filtering
         url = "{}/releases".format(self.api_root)
         params = {"product": product}
@@ -42,24 +39,13 @@ class BalrogClient(object):
                            params=params)
         req.raise_for_status()
         releases = req.json()["releases"]
-        releases = self.legacy_filter(releases, product, branch, version)
         if not include_latest:
             releases = [r for r in releases if not
                         r['name'].endswith("-latest")]
+        # TODO: filter out release names not matching
+        # {product}-{branch}-nighlty-{biuldid_pattern} for safety
         releases = sorted(releases, key=lambda r: r["name"], reverse=reverse)
         return releases[:limit]
-
-    @staticmethod
-    def legacy_filter(releases, product, branch=None, version=None):
-        # TODO: to be removed
-        # Filter internally for now, can be removed when Bug 1137367 is landed
-        releases = [r for r in releases if r['product'] == product]
-        if branch:
-            releases = [r for r in releases if
-                        r['name'].startswith("{}-{}".format(product, branch))]
-        if version:
-            releases = [r for r in releases if r['version'] == version]
-        return releases
 
     def get_build(self, release, platform, locale):
         url = "{}/releases/{}/builds/{}/{}".format(self.api_root, release,
@@ -70,21 +56,7 @@ class BalrogClient(object):
         return req.json()
 
 
-def setup_gnupg():
-    home = os.getcwd()
-    gpg = gnupg.GPG(gnupghome=home)
-    gpg.import_keys(open("docker-worker-pub.pem").read())
-
-
-def iso_to_ms(iso_dt):
-    dt = iso8601.parse_date(iso_dt)
-    # Convert second to ms
-    return int(time.mktime(dt.timetuple()) * 1000)
-
-
 def encrypt_env_var(task_id, start_time, end_time, name, value):
-    start_time = iso_to_ms(start_time)
-    end_time = iso_to_ms(end_time)
     message = {
         "messageVersion": "1",
         "taskId": task_id,
@@ -94,13 +66,13 @@ def encrypt_env_var(task_id, start_time, end_time, name, value):
         "value": value
     }
     message = str(json.dumps(message))
-    # TODO: move to a separate directory
-    home = os.getcwd()
-    gpg = gnupg.GPG(gnupghome=home)
-    tc_docker_fingerprint = "725742D8A7CED276999E52152A1FA0553A13C34A"
-    res = gpg.encrypt(message, tc_docker_fingerprint, always_trust=True,
-                      armor=False)
-    return base64.b64encode(res.data)
+    return encrypt_openpgpjs(message)
+
+
+def encrypt_openpgpjs(message):
+    message = base64.b64encode(message)
+    ret = sh.node("openpgpjs_encrypt.js", message)
+    return ret.strip()
 
 
 def create_task_graph(platform, locale, from_mar, to_mar, secrets):
@@ -109,6 +81,8 @@ def create_task_graph(platform, locale, from_mar, to_mar, secrets):
     task_3_id = slugId()
     now = stringDate(datetime.datetime.utcnow())
     deadline = fromNow('2h')
+    enc_now = int(time.time() * 1000)
+    enc_deadline = enc_now + 2 * 3600 * 1000
     artifacts_expire = fromNow('7d')
     # TODO: move the graph to a yaml template
     task_graph = {
@@ -201,12 +175,14 @@ def create_task_graph(platform, locale, from_mar, to_mar, secrets):
                                 "https://aus4-admin-dev.allizom.org/api",
                         },
                         "encryptedEnv": [
-                            encrypt_env_var(task_id=task_3_id, start_time=now,
-                                            end_time=deadline,
+                            encrypt_env_var(task_id=task_3_id,
+                                            start_time=enc_now,
+                                            end_time=enc_deadline,
                                             name="BALROG_USERNAME",
                                             value=secrets["balrog_username"]),
-                            encrypt_env_var(task_id=task_3_id, start_time=now,
-                                            end_time=deadline,
+                            encrypt_env_var(task_id=task_3_id,
+                                            start_time=enc_now,
+                                            end_time=enc_deadline,
                                             name="BALROG_PASSWORD",
                                             value=secrets["balrog_password"]),
                         ],
@@ -314,7 +290,6 @@ def main(api_root, secrets):
     pulse = BuildConsumer(applabel='funsize', connect=False)
     pulse.config = PulseConfiguration(user=pulse_credentials["user"],
                                       password=pulse_credentials["password"])
-    setup_gnupg()
     # TODO: use durable queues in production
     log.info("Listening for pulse messages")
     pulse.configure(
@@ -338,7 +313,7 @@ if __name__ == '__main__':
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     logging.getLogger("requests").setLevel(logging.WARN)
     logging.getLogger("taskcluster").setLevel(logging.WARN)
+    logging.getLogger("hawk").setLevel(logging.WARN)
+    logging.getLogger("sh").setLevel(logging.WARN)
     secrets = yaml.safe_load(args.secrets)
     main(args.balrog_api_root, secrets)
-
-# TODO: encrypt credentials for the balrog task
