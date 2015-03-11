@@ -19,7 +19,7 @@ async function encryptMessage (message) {
   return new Buffer(unarmoredEncryptedData).toString('base64');
 }
 
-function encryptEnv(taskId, startTime, endTime, name, value) {
+async function encryptEnv(taskId, startTime, endTime, name, value) {
   let message = {
     messageVersion: "1",
     taskId: taskId,
@@ -28,7 +28,7 @@ function encryptEnv(taskId, startTime, endTime, name, value) {
     name: name,
     value: value
   };
-  return encryptMessage(JSON.stringify(message));
+  return await encryptMessage(JSON.stringify(message));
 }
 
 // TODO: compile the regexps only once
@@ -63,9 +63,13 @@ var propertiesToObject = function(props){
 export async function processMessage(message, scheduler) {
   let payload = message.payload.payload;
   if (!interestingBuilderName(payload.build.builderName)) {
+    console.log("ignoring", payload.build.builderName, message.routingKey);
     return;
   }
   if (payload.results !== 0) {
+    console.log("ignoring %s/%s with non zero (%s) result",
+                payload.build.builderName, message.routingKey,
+                payload.results);
     return;
   }
   let props = propertiesToObject(payload.build.properties);
@@ -80,13 +84,9 @@ export async function processMessage(message, scheduler) {
   let build_to = await c.getBuild(_.first(releases).name, platform, locale);
   let mar_from = build_from["completes"][0]["fileUrl"];
   let mar_to = build_to["completes"][0]["fileUrl"];
-  console.log("sweet 3", mar_from, mar_to);
-  try {
+  console.log("creatig task for", message.routingKey);
   await create_task_graph(scheduler, platform, locale, mar_from, mar_to);
-  } catch (err) {
-    console.log("ew", err);
-  }
-};
+}
 
 var triggerFunsizeTask = function(data, scheduler){
   var tasks1 = createTaskDefinition(data);
@@ -161,10 +161,10 @@ var createTaskDefinition = function(data, env){
   return taskDef;
 };
 
-async function create_task_graph(scheduler, platform, locale, from_mar, to_mar){
-  let task1Id = slugid();
-  let task2Id = slugid();
-  let task3Id = slugid();
+async function create_task_graph(scheduler, platform, locale, from_mar, to_mar) {
+  let task1Id = slugid.v4();
+  let task2Id = slugid.v4();
+  let task3Id = slugid.v4();
   let nowISO = (new Date()).toJSON();
   let now = _.now();
   let deadlineISO = utils.fromNow('2h');
@@ -258,9 +258,9 @@ async function create_task_graph(scheduler, platform, locale, from_mar, to_mar){
               BALROG_API_ROOT: "https://aus4-admin-dev.allizom.org/api",
             },
             encryptedEnv: [
-              encryptEnv(task3Id, now, deadline, 'BALROG_USERNAME',
+              await encryptEnv(task3Id, now, deadline, 'BALROG_USERNAME',
                          config.balrog.credentials.username),
-              encryptEnv(task3Id, now, deadline, 'BALROG_PASSWORD',
+              await encryptEnv(task3Id, now, deadline, 'BALROG_PASSWORD',
                          config.balrog.credentials.password)
             ],
           },
@@ -281,9 +281,7 @@ async function create_task_graph(scheduler, platform, locale, from_mar, to_mar){
     }
   };
   let graphId = slugid.v4();
-  console.log("Submitting a new graph", graphId, JSON.stringify(taskGraph));
-  //scheduler.createTaskGraph(graphId, tasks).then(function(result) {
-  //  console.log(result.status);
-  //  process.exit(1);
-  //});
+  console.log("Submitting a new graph", graphId);
+  let result = await scheduler.createTaskGraph(graphId, taskGraph);
+  console.log(result.status);
 }

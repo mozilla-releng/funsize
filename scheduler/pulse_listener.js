@@ -3,27 +3,51 @@ import taskcluster from 'taskcluster-client';
 import {processMessage} from './lib/functions';
 import config from './config/rail';
 
-var listener = new taskcluster.PulseListener(config.pulse);
-var scheduler = new taskcluster.Scheduler(config.taskcluster);
+function routingKeyPatterns() {
+  let branches = [
+    'mozilla-central',
+    'mozilla-aurora',
+    'comm-central',
+    'comm-aurora'
+  ];
+  let platforms = [ 'linux', 'linux64', 'win32', 'win64', 'mac' ];
+  let jobs = [];
+  for (let branch of branches) {
+    for (let platform of platforms) {
+      jobs = jobs.concat([
+        `build.${branch}-${platform}-nightly.*.finished`,
+        `build.${branch}-${platform}-l10n-nightly.*.finished`
+      ]);
+    }
+  }
+  return jobs;
+}
 
-listener.bind({
-  exchange: 'exchange/build/',
-  routingKeyPattern: 'build.#.finished'
-});
+async function main() {
+  let listener = new taskcluster.PulseListener(config.pulse);
+  let scheduler = new taskcluster.Scheduler(config.taskcluster);
 
-listener.on('message', function(message) {
-  return new Promise(function() {
-    processMessage(message, scheduler);
-    message.ack();
+  let bindings = [];
+  // TODO: Need to check if the bindings are only thiese ones
+  for (let pattern of routingKeyPatterns()) {
+    bindings.push(
+      listener.bind({
+        exchange: 'exchange/build/',
+        routingKeyPattern: pattern
+      })
+    );
+  }
+  await Promise.all(bindings);
+
+  listener.on('message', (message) => {
+    try {
+      return processMessage(message, scheduler);
+    } catch (err) {
+      console.error((new Date).toUTCString() + ' uncaughtException:', err.message);
+      console.error(err.stack);
+    }
   });
-});
+  await listener.resume();
+}
 
-listener.resume().then(function() {
-  console.log("listening");
-});
-
-process.on('uncaughtException', function (err) {
-  console.error((new Date).toUTCString() + ' uncaughtException:', err.message);
-  console.error(err.stack);
-  process.exit(1);
-});
+main();

@@ -1,18 +1,23 @@
 {
-  "name": "taskcluster-pulse",
-  "version": "0.0.1",
+  "name": "funsize-taskcluster",
+  "version": "0.1.0",
   "author": "Rail Aliiev <rail@mozilla.com>",
-  "description": "Taskcluster Pulse listener",
+  "description": "Funsize scheduler",
   "license": "MPL-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rail/funsize-taskcluster"
+  },
+  "scripts": {
+    "funsize": "./node_modules/.bin/babel-node --experimental pulse_listener.js"
+  },
   "dependencies": {
-    "amqplib": "^0.3.0",
     "babel": "^4.7.3",
-    "joi": "^5.1.0",
     "lodash": "^3.5.0",
-    "promise": "^6.1.0",
+    "openpgp": "^0.11.1",
     "slugid": "^1.0.3",
     "superagent": "^0.21.0",
     "superagent-promise": "^0.2.0",
-    "taskcluster-client": "git://github.com/taskcluster/taskcluster-client"
+    "taskcluster-client": "^0.22.0-alpha"
   }
 }
