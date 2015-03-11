@@ -11,5 +11,4 @@ python /home/worker/bin/funsize-balrog-submitter.py \
     --artifacts-url-prefix "$PARENT_TASK_ARTIFACTS_URL_PREFIX" \
     --manifest /home/worker/manifest.json \
     -a "$BALROG_API_ROOT" \
-    --dummy \
     --verbose

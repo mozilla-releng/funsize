@@ -1,18 +1,55 @@
 'use strict';
 
-//var Joi = require('joi');
-var utils = require('taskcluster-client/lib/utils');
-var slugid = require('slugid');
-var config = require('../config/rail');
+import utils from 'taskcluster-client/lib/utils';
+import slugid from 'slugid';
+import config from '../config/rail';
+import _ from 'lodash';
+import {BalrogClient} from './balrog';
+import openpgp from 'openpgp';
+import fs from 'fs';
+import path from 'path';
 
-var interestingMessage = function (message){
-  var routingKey = message.routingKey;
-  var patterns = [
-    // TODO: include en-US builds, chunked l10n
-    /build\.mozilla-(central|aurora)-.+-l10n-nightly\..+\.finished/,
+var pubKeyArmored = fs.readFileSync(path.join(__dirname, '../docker-worker-pub.pem'), 'ascii');
+var pubKey = openpgp.key.readArmored(pubKeyArmored);
+
+async function encryptMessage (message) {
+
+  let encryptedMessage = await openpgp.encryptMessage(pubKey.keys, message);
+  var unarmoredEncryptedData = openpgp.armor.decode(encryptedMessage).data;
+  return new Buffer(unarmoredEncryptedData).toString('base64');
+}
+
+function encryptEnv(taskId, startTime, endTime, name, value) {
+  let message = {
+    messageVersion: "1",
+    taskId: taskId,
+    startTime: startTime,
+    endTime: endTime,
+    name: name,
+    value: value
+  };
+  return encryptMessage(JSON.stringify(message));
+}
+
+// TODO: compile the regexps only once
+var interestingBuilderName = function (builderName){
+  let branches = [
+    'mozilla-central',
+    'mozilla-aurora',
+    'comm-central',
+    'comm-aurora'
   ];
-  return patterns.some(function(pattern){
-    return pattern.test(routingKey);
+  let builders = [];
+  for (let branch of branches) {
+    builders = builders.concat([
+      `WINNT \d+\.\d+ (x86-64 )?${branch} nightly`,
+      `Linux (x86-64 )?${branch} nightly`,
+      `OS X \d+\.\d+ ${branch} nightly`,
+      `(Thunderbird|Firefox) ${branch} (linux|linux64|win32|win64|mac) l10n nightly`
+    ]);
+  }
+  return builders.some(function(builder){
+    return RegExp(builder).test(builderName);
   });
 };
 
@@ -23,27 +60,32 @@ var propertiesToObject = function(props){
   }, {});
 };
 
-var processMessage = function(message, scheduler){
-  if (!interestingMessage(message)) {
-    console.log("ignoring", message.routingKey);
-    return undefined;
+export async function processMessage(message, scheduler) {
+  let payload = message.payload.payload;
+  if (!interestingBuilderName(payload.build.builderName)) {
+    return;
   }
-  var payload = message.payload.payload;
-  var result = payload.results;
-  if (result !== 0) {
-    console.log("Ignoring non zero build", result);
-    return undefined;
+  if (payload.results !== 0) {
+    return;
   }
-  var props = propertiesToObject(payload.build.properties);
-  //console.log(props.platform, props.completeMarUrl, props.completeMarHash,
-  //            props.branch);
-  var data = {
-    toMarURL: 'tbd',
-    fromMarURL: 'TBD', // get from balrog
-    platform: 'TODO',
-    locale: 'TODO',
-  };
-  triggerFunsizeTask(data, scheduler);
+  let props = propertiesToObject(payload.build.properties);
+  let locale = props.locale || 'en-US';
+  let platform = props.platform;
+  let branch = props.branch;
+  let product = props.appName;
+  let c = new BalrogClient('https://aus4-admin.mozilla.org/api',
+                           config.balrog.credentials);
+  let releases = await c.getReleases(product, branch, {limit: 3});
+  let build_from = await c.getBuild(_.last(releases).name, platform, locale);
+  let build_to = await c.getBuild(_.first(releases).name, platform, locale);
+  let mar_from = build_from["completes"][0]["fileUrl"];
+  let mar_to = build_to["completes"][0]["fileUrl"];
+  console.log("sweet 3", mar_from, mar_to);
+  try {
+  await create_task_graph(scheduler, platform, locale, mar_from, mar_to);
+  } catch (err) {
+    console.log("ew", err);
+  }
 };
 
 var triggerFunsizeTask = function(data, scheduler){
@@ -66,7 +108,6 @@ var triggerFunsizeTask = function(data, scheduler){
     ]
   };
   var graphId = slugid.v4();
-  console.log("almost");
   try {
     console.log("Submitting a new graph", graphId, JSON.stringify(tasks));
   } catch (e) {
@@ -76,22 +117,9 @@ var triggerFunsizeTask = function(data, scheduler){
   //  console.log(result.status);
   //  process.exit(1);
   //});
-  console.log("done");
 };
 
 var createTaskDefinition = function(data, env){
-
-  //var schema = Joi.object.keys({
-    //toMarURL: Joi.string().required(),
-    //toMarHash: Joi.string().required(),
-    //fromMarURL: Joi.string().required(),
-    //fromMarHash: Joi.string().required(),
-    //productVersion: Joi.string().required(),
-    //channelID: Joi.string().required(),
-    //repo: Joi.string().required(),
-    //revision: Joi.string().required(),
-  //});
-  //Joi.validate(data, schema);
 
   var payload = {
    image: config.worker.image,
@@ -133,4 +161,129 @@ var createTaskDefinition = function(data, env){
   return taskDef;
 };
 
-module.exports.processMessage = processMessage;
+async function create_task_graph(scheduler, platform, locale, from_mar, to_mar){
+  let task1Id = slugid();
+  let task2Id = slugid();
+  let task3Id = slugid();
+  let nowISO = (new Date()).toJSON();
+  let now = _.now();
+  let deadlineISO = utils.fromNow('2h');
+  let deadline = _.now() + 2*3600*1000;
+  let artifactsExpireISO = utils.fromNow('7d');
+
+  let taskGraph = {
+    scopes: ['queue:*', 'docker-worker:*', 'scheduler:*'],
+    tasks: [
+      {
+        taskId: task1Id,
+        requires: [],
+        task:{
+          provisionerId: "aws-provisioner",
+          workerType: "b2gtest",
+          created: nowISO,
+          deadline: deadlineISO,
+          payload: {
+            image: "rail/funsize-update-generator",
+            command: ["/runme.sh"],
+            maxRunTime: 300,
+            artifacts:{
+              "public/env": {
+                path: "/home/worker/artifacts/",
+                type: "directory",
+                expires: artifactsExpireISO,
+              }
+            },
+            env: {
+              FROM_MAR: from_mar,
+              TO_MAR: to_mar,
+              PLATFORM: platform,
+              LOCALE: locale,
+            }
+          },
+          metadata: {
+            name: "Funsize update generator task",
+            description: "Funsize update generator task",
+            owner: "release+funsize@mozilla.com",
+            source: "https://github.com/rail/funsize-taskcluster"
+          }
+        }
+      },
+      {
+        taskId: task2Id,
+        requires: [task1Id],
+        task: {
+          provisionerId: "aws-provisioner",
+          workerType: "b2gtest",
+          created: nowISO,
+          deadline: deadlineISO,
+          payload: {
+            image: "rail/funsize-signer",
+            command: ["/runme.sh"],
+            maxRunTime: 300,
+            artifacts: {
+              "public/env": {
+                path: "/home/worker/artifacts/",
+                type: "directory",
+                expires: artifactsExpireISO,
+              }
+            },
+            env: {
+              PARENT_TASK_ARTIFACTS_URL_PREFIX:
+                  "https://queue.taskcluster.net/v1/task/" + task1Id + "/artifacts/public/env",
+            }
+          },
+          metadata: {
+            name: "Funsize signing task",
+            description: "Funsize signing task",
+            owner: "release+funsize@mozilla.com",
+            source: "https://github.com/rail/funsize-taskcluster"
+          }
+        }
+      },
+      {
+        taskId: task3Id,
+        requires: [task2Id],
+        task: {
+          provisionerId: "aws-provisioner",
+          workerType: "b2gtest",
+          created: nowISO,
+          deadline: deadlineISO,
+          payload: {
+            image: "rail/funsize-balrog-submitter",
+            command: ["/runme.sh"],
+            maxRunTime: 300,
+            env: {
+              PARENT_TASK_ARTIFACTS_URL_PREFIX:
+                  "https://queue.taskcluster.net/v1/task/" + task2Id + "/artifacts/public/env",
+              BALROG_API_ROOT: "https://aus4-admin-dev.allizom.org/api",
+            },
+            encryptedEnv: [
+              encryptEnv(task3Id, now, deadline, 'BALROG_USERNAME',
+                         config.balrog.credentials.username),
+              encryptEnv(task3Id, now, deadline, 'BALROG_PASSWORD',
+                         config.balrog.credentials.password)
+            ],
+          },
+          metadata: {
+            name: "Funsize balrog submitter task",
+            description: "Funsize balrog submitter task",
+            owner: "release+funsize@mozilla.com",
+            source: "https://github.com/rail/funsize-taskcluster"
+          }
+        }
+      },
+    ],
+    metadata: {
+        name: "Funsize",
+        description: "Funsize is **fun**!",
+        owner: "rail@mozilla.com",
+        source: "http://rail.merail.ca"
+    }
+  };
+  let graphId = slugid.v4();
+  console.log("Submitting a new graph", graphId, JSON.stringify(taskGraph));
+  //scheduler.createTaskGraph(graphId, tasks).then(function(result) {
+  //  console.log(result.status);
+  //  process.exit(1);
+  //});
+}

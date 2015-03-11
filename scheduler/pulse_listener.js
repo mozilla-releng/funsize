@@ -1,10 +1,7 @@
 'use strict';
-
-
-var taskcluster = require('taskcluster-client');
-var Promise = require('promise');
-var functions = require('./lib/functions');
-var config = require('./config/rail');
+import taskcluster from 'taskcluster-client';
+import {processMessage} from './lib/functions';
+import config from './config/rail';
 
 var listener = new taskcluster.PulseListener(config.pulse);
 var scheduler = new taskcluster.Scheduler(config.taskcluster);
@@ -15,12 +12,18 @@ listener.bind({
 });
 
 listener.on('message', function(message) {
-  return new Promise(function(){
-    functions.processMessage(message, scheduler);
+  return new Promise(function() {
+    processMessage(message, scheduler);
     message.ack();
   });
 });
 
 listener.resume().then(function() {
   console.log("listening");
+});
+
+process.on('uncaughtException', function (err) {
+  console.error((new Date).toUTCString() + ' uncaughtException:', err.message);
+  console.error(err.stack);
+  process.exit(1);
 });

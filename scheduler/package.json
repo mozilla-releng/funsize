@@ -6,9 +6,13 @@
   "license": "MPL-2.0",
   "dependencies": {
     "amqplib": "^0.3.0",
+    "babel": "^4.7.3",
     "joi": "^5.1.0",
+    "lodash": "^3.5.0",
     "promise": "^6.1.0",
     "slugid": "^1.0.3",
+    "superagent": "^0.21.0",
+    "superagent-promise": "^0.2.0",
     "taskcluster-client": "git://github.com/taskcluster/taskcluster-client"
   }
 }
