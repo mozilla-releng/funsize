@@ -13,7 +13,9 @@
   },
   "dependencies": {
     "babel": "^4.7.3",
+    "js-yaml": "^3.2.7",
     "lodash": "^3.5.0",
+    "mustache": "^1.1.0",
     "openpgp": "^0.11.1",
     "slugid": "^1.0.3",
     "superagent": "^0.21.0",

@@ -1,6 +1,6 @@
 'use strict';
 
-import utils from 'taskcluster-client/lib/utils';
+import {fromNowJSON} from 'taskcluster-client/lib/utils';
 import slugid from 'slugid';
 import config from '../config/rail';
 import _ from 'lodash';
@@ -8,6 +8,8 @@ import {BalrogClient} from './balrog';
 import openpgp from 'openpgp';
 import fs from 'fs';
 import path from 'path';
+import yaml from 'js-yaml';
+import Mustache from 'mustache';
 
 var pubKeyArmored = fs.readFileSync(path.join(__dirname, '../docker-worker-pub.pem'), 'ascii');
 var pubKey = openpgp.key.readArmored(pubKeyArmored);
@@ -88,200 +90,39 @@ export async function processMessage(message, scheduler) {
   await create_task_graph(scheduler, platform, locale, mar_from, mar_to);
 }
 
-var triggerFunsizeTask = function(data, scheduler){
-  var tasks1 = createTaskDefinition(data);
-  var task1Id = slugid.v4();
-  var tasks2 = createTaskDefinition(data, {PARENT_TASK_ID: task1Id});
-  var task2Id = slugid.v4();
-  var tasks ={
-    tasks: [
-      {
-        taskId: task1Id,
-        requires: [],
-        task: tasks1
-      },
-      {
-        taskId: task2Id,
-        requires: [task1Id],
-        task: tasks2
-      },
-    ]
-  };
-  var graphId = slugid.v4();
+async function create_task_graph(scheduler, platform, locale, fromMAR, toMAR) {
   try {
-    console.log("Submitting a new graph", graphId, JSON.stringify(tasks));
-  } catch (e) {
-    console.log("err", e);
-  }
-  //scheduler.createTaskGraph(graphId, tasks).then(function(result) {
-  //  console.log(result.status);
-  //  process.exit(1);
-  //});
-};
-
-var createTaskDefinition = function(data, env){
-
-  var payload = {
-   image: config.worker.image,
-   command: ['/runme.sh'],
-   maxRunTime: 300,
-   artifacts: {
-     path: '/home/worker/artifacts/',
-     type: 'directory',
-     expires: utils.fromNow('8h'),
-
-   },
-   env: {
-     'TO_MAR': data.toMarURL,
-     'FROM_MAR': data.fromMarURL,
-     'PLATFORM': data.platform,
-     'LOCALE': data.locale,
-   }
+  let template = fs.readFileSync(
+    path.join(__dirname, '../tasks/funsize.yml'),
+    {encoding: 'utf-8'}
+  );
+  let now = new Date();
+  let vars = {
+    updateGeneratorTaskId: slugid.v4(),
+    signingTaskId: slugid.v4(),
+    balrogTaskId: slugid.v4(),
+    now: now.toJSON(),
+    fromNowJSON: () => (text) => fromNowJSON(text),
+    fromMAR: fromMAR,
+    toMAR: toMAR,
+    platform: platform,
+    locale: locale,
   };
-  if (env) {
-    for (var k in env) {
-      if (env.hasOwnProperty(k)) {
-        payload.env[k] = env[k];
-      }
-    }
-  }
-  var taskDef = {
-    provisionerId: "aws-provisioner",
-    workerType: config.worker.workerType,
-    created: new Date().toJSON(),
-    deadline: utils.fromNow('1h'),
-    payload: payload,
-    metadata: {
-      name: "Funsize update generator task",
-      description: "Funsize update generator task",
-      owner: "release+funsize@mozilla.com",
-      source: "https://github.com/mozilla/funsize-taskcluster",
-    }
-  };
-  return taskDef;
-};
-
-async function create_task_graph(scheduler, platform, locale, from_mar, to_mar) {
-  let task1Id = slugid.v4();
-  let task2Id = slugid.v4();
-  let task3Id = slugid.v4();
-  let nowISO = (new Date()).toJSON();
-  let now = _.now();
-  let deadlineISO = utils.fromNow('2h');
-  let deadline = _.now() + 2*3600*1000;
-  let artifactsExpireISO = utils.fromNow('7d');
-
-  let taskGraph = {
-    scopes: ['queue:*', 'docker-worker:*', 'scheduler:*'],
-    tasks: [
-      {
-        taskId: task1Id,
-        requires: [],
-        task:{
-          provisionerId: "aws-provisioner",
-          workerType: "b2gtest",
-          created: nowISO,
-          deadline: deadlineISO,
-          payload: {
-            image: "rail/funsize-update-generator",
-            command: ["/runme.sh"],
-            maxRunTime: 300,
-            artifacts:{
-              "public/env": {
-                path: "/home/worker/artifacts/",
-                type: "directory",
-                expires: artifactsExpireISO,
-              }
-            },
-            env: {
-              FROM_MAR: from_mar,
-              TO_MAR: to_mar,
-              PLATFORM: platform,
-              LOCALE: locale,
-            }
-          },
-          metadata: {
-            name: "Funsize update generator task",
-            description: "Funsize update generator task",
-            owner: "release+funsize@mozilla.com",
-            source: "https://github.com/rail/funsize-taskcluster"
-          }
-        }
-      },
-      {
-        taskId: task2Id,
-        requires: [task1Id],
-        task: {
-          provisionerId: "aws-provisioner",
-          workerType: "b2gtest",
-          created: nowISO,
-          deadline: deadlineISO,
-          payload: {
-            image: "rail/funsize-signer",
-            command: ["/runme.sh"],
-            maxRunTime: 300,
-            artifacts: {
-              "public/env": {
-                path: "/home/worker/artifacts/",
-                type: "directory",
-                expires: artifactsExpireISO,
-              }
-            },
-            env: {
-              PARENT_TASK_ARTIFACTS_URL_PREFIX:
-                  "https://queue.taskcluster.net/v1/task/" + task1Id + "/artifacts/public/env",
-            }
-          },
-          metadata: {
-            name: "Funsize signing task",
-            description: "Funsize signing task",
-            owner: "release+funsize@mozilla.com",
-            source: "https://github.com/rail/funsize-taskcluster"
-          }
-        }
-      },
-      {
-        taskId: task3Id,
-        requires: [task2Id],
-        task: {
-          provisionerId: "aws-provisioner",
-          workerType: "b2gtest",
-          created: nowISO,
-          deadline: deadlineISO,
-          payload: {
-            image: "rail/funsize-balrog-submitter",
-            command: ["/runme.sh"],
-            maxRunTime: 300,
-            env: {
-              PARENT_TASK_ARTIFACTS_URL_PREFIX:
-                  "https://queue.taskcluster.net/v1/task/" + task2Id + "/artifacts/public/env",
-              BALROG_API_ROOT: "https://aus4-admin-dev.allizom.org/api",
-            },
-            encryptedEnv: [
-              await encryptEnv(task3Id, now, deadline, 'BALROG_USERNAME',
-                         config.balrog.credentials.username),
-              await encryptEnv(task3Id, now, deadline, 'BALROG_PASSWORD',
-                         config.balrog.credentials.password)
-            ],
-          },
-          metadata: {
-            name: "Funsize balrog submitter task",
-            description: "Funsize balrog submitter task",
-            owner: "release+funsize@mozilla.com",
-            source: "https://github.com/rail/funsize-taskcluster"
-          }
-        }
-      },
-    ],
-    metadata: {
-        name: "Funsize",
-        description: "Funsize is **fun**!",
-        owner: "rail@mozilla.com",
-        source: "http://rail.merail.ca"
-    }
-  };
+  let enc_deadline = now.getTime() + 24*3600*1000;
+  vars.BALROG_USERNAME_ENC_MESSAGE = await encryptEnv(
+    vars.balrogTaskId, now.getTime(), enc_deadline, 'BALROG_USERNAME',
+    config.balrog.credentials.username);
+  vars.BALROG_PASSWORD_ENC_MESSAGE = await encryptEnv(
+    vars.balrogTaskId, now.getTime(), enc_deadline, 'BALROG_PASSWORD',
+    config.balrog.credentials.password);
+  let rendered = Mustache.render(template, vars);
+  let taskGraph = yaml.safeLoad(rendered);
   let graphId = slugid.v4();
   console.log("Submitting a new graph", graphId);
   let result = await scheduler.createTaskGraph(graphId, taskGraph);
-  console.log(result.status);
+  console.log("Result was:", result.status);
+  } catch (err) {
+    console.log("eeeeew", err, err.stack);
+    throw err;
+  }
 }

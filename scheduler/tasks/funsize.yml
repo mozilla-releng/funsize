@@ -1,0 +1,113 @@
+---
+metadata:
+  name: Funsize
+  description: Funsize task graph for nightly builds and L10N repacks
+  owner: release+funsize@mozilla.com
+  source: https://github.com/rail/funsize-taskcluster
+
+scopes:
+  - queue:*
+  - docker-worker:*
+  - scheduler:*
+
+tasks:
+  - taskId: '{{updateGeneratorTaskId}}'
+    task:
+      created: '{{now}}'
+      deadline: '{{#fromNowJSON}}2 hours{{/fromNowJSON}}'
+      metadata:
+        owner: release+funsize@mozilla.com
+        source: https://github.com/rail/funsize-taskcluster
+        name: "[funsize] Update generating task"
+        description: |
+          This task generates MAR files and publishes unsigned bits.
+
+      workerType: "b2gtest"
+      provisionerId: "aws-provisioner"
+
+      tags:
+        createdForUser: rail@mozilla.com
+
+      payload:
+        image: 'rail/funsize-update-generator'
+        maxRunTime: 600
+        command:
+            - /runme.sh
+
+        env:
+          FROM_MAR: '{{{fromMAR}}}'
+          TO_MAR: '{{{toMAR}}}'
+          PLATFORM: '{{platform}}'
+          LOCALE: '{{locale}}'
+
+        artifacts:
+          'public/env':
+            path: /home/worker/artifacts/
+            type: directory
+            expires: '{{#fromNowJSON}}7 days{{/fromNowJSON}}'
+
+  - taskId: '{{signingTaskId}}'
+    requires:
+      - '{{updateGeneratorTaskId}}'
+    task:
+      created: '{{now}}'
+      deadline: '{{#fromNowJSON}}2 hours{{/fromNowJSON}}'
+      metadata:
+        owner: release+funsize@mozilla.com
+        source: https://github.com/rail/funsize-taskcluster
+        name: "[funsize] MAR signing task"
+        description: |
+          This task signs MAR files and publishes signed bits.
+
+      workerType: "b2gtest"
+      provisionerId: "aws-provisioner"
+
+      tags:
+        createdForUser: rail@mozilla.com
+
+      payload:
+        image: 'rail/funsize-signer'
+        maxRunTime: 600
+        command:
+            - /runme.sh
+
+        env:
+          PARENT_TASK_ARTIFACTS_URL_PREFIX: 'https://queue.taskcluster.net/v1/task/{{updateGeneratorTaskId}}/artifacts/public/env'
+
+        artifacts:
+          'public/env':
+            path: /home/worker/artifacts/
+            type: directory
+            expires: '{{#fromNowJSON}}7 days{{/fromNowJSON}}'
+
+  - taskId: '{{balrogTaskId}}'
+    requires:
+      - '{{signingTaskId}}'
+    task:
+      created: '{{now}}'
+      deadline: '{{#fromNowJSON}}2 hours{{/fromNowJSON}}'
+      metadata:
+        owner: release+funsize@mozilla.com
+        source: https://github.com/rail/funsize-taskcluster
+        name: "[funsize] Publish to Balrog"
+        description: |
+          This task publishes signed updates to Balrog.
+
+      workerType: "b2gtest"
+      provisionerId: "aws-provisioner"
+
+      tags:
+        createdForUser: rail@mozilla.com
+
+      payload:
+        image: 'rail/funsize-balrog-submitter'
+        maxRunTime: 600
+        command:
+            - /runme.sh
+
+        env:
+          PARENT_TASK_ARTIFACTS_URL_PREFIX: 'https://queue.taskcluster.net/v1/task/{{signingTaskId}}/artifacts/public/env'
+          BALROG_API_ROOT: 'https://aus4-admin-dev.allizom.org/api'
+        encryptedEnv:
+          - '{{{BALROG_USERNAME_ENC_MESSAGE}}}'
+          - '{{{BALROG_PASSWORD_ENC_MESSAGE}}}'
