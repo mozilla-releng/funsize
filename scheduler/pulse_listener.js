@@ -2,6 +2,9 @@
 import taskcluster from 'taskcluster-client';
 import {processMessage} from './lib/functions';
 import config from './config/rail';
+import Debug from 'debug';
+
+const debug = Debug('funsize:main');
 
 function routingKeyPatterns() {
   let branches = [
@@ -43,10 +46,12 @@ async function main() {
     try {
       return processMessage(message, scheduler);
     } catch (err) {
+      debug('Failed to process message %s', message);
       console.error((new Date).toUTCString() + ' uncaughtException:', err.message);
       console.error(err.stack);
     }
   });
+  debug("Starting listener");
   await listener.resume();
 }
 

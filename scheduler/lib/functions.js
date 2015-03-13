@@ -10,6 +10,9 @@ import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
 import Mustache from 'mustache';
+import Debug from 'debug';
+
+const debug = Debug('funsize:functions');
 
 var pubKeyArmored = fs.readFileSync(path.join(__dirname, '../docker-worker-pub.pem'), 'ascii');
 var pubKey = openpgp.key.readArmored(pubKeyArmored);
@@ -79,15 +82,20 @@ export async function processMessage(message, scheduler) {
   let platform = props.platform;
   let branch = props.branch;
   let product = props.appName;
+  debug("Processign %s %s %s %s", product, branch, platform, locale);
   let c = new BalrogClient('https://aus4-admin.mozilla.org/api',
                            config.balrog.credentials);
   let releases = await c.getReleases(product, branch, {limit: 3});
+  debug("Got releases %s", releases);
   let build_from = await c.getBuild(_.last(releases).name, platform, locale);
+  debug("From: %s", build_from);
   let build_to = await c.getBuild(_.first(releases).name, platform, locale);
-  let mar_from = build_from["completes"][0]["fileUrl"];
-  let mar_to = build_to["completes"][0]["fileUrl"];
+  debug("To: %s", build_from);
+  let fromMAR = build_from["completes"][0]["fileUrl"];
+  let toMAR = build_to["completes"][0]["fileUrl"];
+  debug("Updates from %s to %s", fromMAR, toMAR);
   console.log("creatig task for", message.routingKey);
-  await create_task_graph(scheduler, platform, locale, mar_from, mar_to);
+  await create_task_graph(scheduler, platform, locale, fromMAR, toMAR);
 }
 
 async function create_task_graph(scheduler, platform, locale, fromMAR, toMAR) {

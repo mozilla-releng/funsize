@@ -4,6 +4,9 @@ import config from '../config/rail.js';
 import fs from 'fs';
 import _ from 'lodash';
 import path from 'path';
+import Debug from 'debug';
+
+const debug = Debug('funsize:balrog');
 
 var platform_map = JSON.parse(fs.readFileSync(path.join(__dirname, 'platforms.js')));
 var cert = fs.readFileSync(config.balrog.ca);
@@ -26,37 +29,33 @@ export class BalrogClient {
       product: product,
       name_prefix: `${product}-${branch}`
     };
+    debug("Fetching %s with params %s", url, params);
     let r = await request.get(url).
       ca(cert).
       auth(this.credentials.username, this.credentials.password).
       query(params).
       accept('application/json').end();
     let releases = r.body.releases;
+    debug("got releases: %s", releases);
     if (!options.includeLatest) {
       releases = _.filter(releases, (release) => ! _.endsWith(release.name, '-latest'));
     }
     releases = _.sortByOrder(releases, 'name', ! options.reverse);
     //releases = releases.slice(0, options.limit-1);
     releases = _.take(releases, options.limit);
+    debug("filtered: %s", releases);
     return releases;
   }
 
   async getBuild(release, platform, locale) {
     let balrog_platform = platform_map[platform][0];
     let url = `${this.api_root}/releases/${release}/builds/${balrog_platform}/${locale}`;
+    debug("Fetching %s", url);
     let r = await request.get(url).
       ca(cert).
       auth(this.credentials.username, this.credentials.password).
       accept('application/json').end();
+    debug("Got build: %s", r.body);
     return r.body;
   }
-}
-
-
-async function getReleases(product) {
-  let c = new BalrogClient('https://aus4-admin.mozilla.org/api', config.balrog.credentials);
-  let releases = await c.getReleases('Firefox', 'mozilla-central', {limit: 3});
-  let minus2 = _.last(releases);
-  let platform= platform_map['win32'][0];
-  let build = await c.getBuild(minus2.name, platform, 'en-US');
 }
