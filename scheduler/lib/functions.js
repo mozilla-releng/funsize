@@ -86,11 +86,11 @@ export async function processMessage(message, scheduler) {
   let c = new BalrogClient('https://aus4-admin.mozilla.org/api',
                            config.balrog.credentials);
   let releases = await c.getReleases(product, branch, {limit: 3});
-  debug("Got releases %s", releases);
+  debug("Got releases %j", releases);
   let build_from = await c.getBuild(_.last(releases).name, platform, locale);
-  debug("From: %s", build_from);
+  debug("From: %j", build_from);
   let build_to = await c.getBuild(_.first(releases).name, platform, locale);
-  debug("To: %s", build_from);
+  debug("To: %j", build_from);
   let fromMAR = build_from["completes"][0]["fileUrl"];
   let toMAR = build_to["completes"][0]["fileUrl"];
   debug("Updates from %s to %s", fromMAR, toMAR);

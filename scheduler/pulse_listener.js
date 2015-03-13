@@ -46,7 +46,7 @@ async function main() {
     try {
       return processMessage(message, scheduler);
     } catch (err) {
-      debug('Failed to process message %s', message);
+      debug('Failed to process message %j', message);
       console.error((new Date).toUTCString() + ' uncaughtException:', err.message);
       console.error(err.stack);
     }
