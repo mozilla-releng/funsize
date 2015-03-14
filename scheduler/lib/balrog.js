@@ -41,7 +41,6 @@ export class BalrogClient {
       releases = _.filter(releases, (release) => ! _.endsWith(release.name, '-latest'));
     }
     releases = _.sortByOrder(releases, 'name', ! options.reverse);
-    //releases = releases.slice(0, options.limit-1);
     releases = _.take(releases, options.limit);
     debug("filtered: %j", releases);
     return releases;
