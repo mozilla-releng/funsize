@@ -1,8 +1,9 @@
 'use strict';
 import taskcluster from 'taskcluster-client';
 import {processMessage} from './lib/functions';
-import config from './config/rail';
-import {log} from './lib/logging';
+import {log, setLogDir} from './lib/logging';
+import program from 'commander';
+import fs from 'fs';
 
 function routingKeyPatterns() {
   let branches = [
@@ -25,6 +26,14 @@ function routingKeyPatterns() {
 }
 
 async function main() {
+  program.
+    option('-c, --config <config>', 'Configuration file').
+    parse(process.argv);
+  log.info("loading from", program.config);
+  let config = require(program.config);
+  if (config.funsize.logDir) {
+    setLogDir(config.funsize.logDir);
+  }
   let listener = new taskcluster.PulseListener(config.pulse);
   let scheduler = new taskcluster.Scheduler(config.taskcluster);
 
@@ -41,7 +50,7 @@ async function main() {
   await Promise.all(bindings);
 
   listener.on('message', (message) => {
-    return processMessage(message, scheduler);
+    return processMessage(message, scheduler, config);
   });
 
   log.info("Starting listener");

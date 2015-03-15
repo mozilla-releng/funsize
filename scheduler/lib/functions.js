@@ -2,7 +2,6 @@
 
 import {fromNowJSON} from 'taskcluster-client/lib/utils';
 import slugid from 'slugid';
-import config from '../config/rail';
 import _ from 'lodash';
 import {BalrogClient} from './balrog';
 import openpgp from 'openpgp';
@@ -64,7 +63,7 @@ var propertiesToObject = function(props){
   }, {});
 };
 
-export async function processMessage(message, scheduler) {
+export async function processMessage(message, scheduler, config) {
   let payload = message.payload.payload;
   if (!interestingBuilderName(payload.build.builderName)) {
     log.debug("ignoring %s %s", payload.build.builderName, message.routingKey);
@@ -95,10 +94,10 @@ export async function processMessage(message, scheduler) {
   let toMAR = build_to["completes"][0]["fileUrl"];
   log.debug("Updates from %s to %s", fromMAR, toMAR);
   log.info("creatig task for %s", message.routingKey);
-  await create_task_graph(scheduler, platform, locale, fromMAR, toMAR);
+  await create_task_graph(scheduler, platform, locale, fromMAR, toMAR, config);
 }
 
-async function create_task_graph(scheduler, platform, locale, fromMAR, toMAR) {
+async function create_task_graph(scheduler, platform, locale, fromMAR, toMAR, config) {
   let template = fs.readFileSync(
     path.join(__dirname, '../tasks/funsize.yml'),
     {encoding: 'utf-8'}

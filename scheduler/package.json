@@ -9,10 +9,11 @@
     "url": "https://github.com/rail/funsize-taskcluster"
   },
   "scripts": {
-    "funsize": "./node_modules/.bin/babel-node --experimental funsize.js"
+    "funsize": "./node_modules/.bin/babel-node --experimental funsize.js --config ~/Private/funsizeconfig.js"
   },
   "dependencies": {
     "babel": "^4.7.3",
+    "commander": "^2.7.1",
     "js-yaml": "^3.2.7",
     "lodash": "^3.5.0",
     "mustache": "^1.1.0",

@@ -1,6 +1,5 @@
 'use strict';
 import request from 'superagent-promise';
-import config from '../config/rail.js';
 import fs from 'fs';
 import _ from 'lodash';
 import path from 'path';
