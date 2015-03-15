@@ -6,8 +6,9 @@ import _ from 'lodash';
 import path from 'path';
 import {log} from './logging';
 
-var platform_map = JSON.parse(fs.readFileSync(path.join(__dirname, 'platforms.js')));
-var cert = fs.readFileSync(config.balrog.ca);
+var platform_map = JSON.parse(fs.readFileSync(path.join(__dirname, '../data/platforms.js')));
+// use Mozilla CA certificate for Balrog
+var cert = fs.readFileSync(path.join(__dirname, '../data/mozilla-root.crt'));
 
 export class BalrogClient {
   constructor(api_root, credentials) {

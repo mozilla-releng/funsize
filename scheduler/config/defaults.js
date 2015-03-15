@@ -1,20 +1,24 @@
 module.exports = {
+  balrog: {
+    credentials: {
+      username: null,
+      password: null
+    }
+  },
   pulse: {
     credentials: {
-      username: '',
-      password: ''
+      username: null,
+      password: null
     },
-    // Giving a name makes the queue durable
-    // queueName: 'test-q', maxLength: 50
+    queueName: 'funsize'
   },
   taskcluster: {
     credentials: {
-      clientId: '',
-      accessToken: ''
+      clientId: null,
+      accessToken: null
     }
   },
-  worker: {
-    workerType: 'b2gtest',
-    image: 'rail/funsize-update-generator'
+  funsize: {
+    logDir: '/home/worker/funsize-logs'
   }
 };

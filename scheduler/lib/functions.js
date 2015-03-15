@@ -13,7 +13,7 @@ import Mustache from 'mustache';
 import {log} from './logging';
 
 
-var pubKeyArmored = fs.readFileSync(path.join(__dirname, '../docker-worker-pub.pem'), 'ascii');
+var pubKeyArmored = fs.readFileSync(path.join(__dirname, '../data/docker-worker-pub.pem'), 'ascii');
 var pubKey = openpgp.key.readArmored(pubKeyArmored);
 
 async function encryptMessage (message) {

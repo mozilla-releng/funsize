@@ -9,7 +9,7 @@
     "url": "https://github.com/rail/funsize-taskcluster"
   },
   "scripts": {
-    "funsize": "./node_modules/.bin/babel-node --experimental pulse_listener.js"
+    "funsize": "./node_modules/.bin/babel-node --experimental funsize.js"
   },
   "dependencies": {
     "babel": "^4.7.3",
