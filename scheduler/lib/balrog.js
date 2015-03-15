@@ -4,9 +4,7 @@ import config from '../config/rail.js';
 import fs from 'fs';
 import _ from 'lodash';
 import path from 'path';
-import Debug from 'debug';
-
-const debug = Debug('funsize:balrog');
+import {log} from './logging';
 
 var platform_map = JSON.parse(fs.readFileSync(path.join(__dirname, 'platforms.js')));
 var cert = fs.readFileSync(config.balrog.ca);
@@ -29,32 +27,32 @@ export class BalrogClient {
       product: product,
       name_prefix: `${product}-${branch}`
     };
-    debug("Fetching %s with params %j", url, params);
+    log.debug("Fetching %s with params %j", url, params);
     let r = await request.get(url).
       ca(cert).
       auth(this.credentials.username, this.credentials.password).
       query(params).
       accept('application/json').end();
     let releases = r.body.releases;
-    debug("got releases: %j", releases);
+    log.debug("got releases: %j", releases);
     if (!options.includeLatest) {
       releases = _.filter(releases, (release) => ! _.endsWith(release.name, '-latest'));
     }
     releases = _.sortByOrder(releases, 'name', ! options.reverse);
     releases = _.take(releases, options.limit);
-    debug("filtered: %j", releases);
+    log.debug("filtered: %j", releases);
     return releases;
   }
 
   async getBuild(release, platform, locale) {
     let balrog_platform = platform_map[platform][0];
     let url = `${this.api_root}/releases/${release}/builds/${balrog_platform}/${locale}`;
-    debug("Fetching %s", url);
+    log.debug("Fetching %s", url);
     let r = await request.get(url).
       ca(cert).
       auth(this.credentials.username, this.credentials.password).
       accept('application/json').end();
-    debug("Got build: %j", r.body);
+    log.debug("Got build: %j", r.body);
     return r.body;
   }
 }
