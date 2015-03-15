@@ -27,20 +27,20 @@ export class BalrogClient {
       product: product,
       name_prefix: `${product}-${branch}`
     };
-    log.debug("Fetching %s with params %j", url, params);
+    log.debug("Fetching %s with params", url, params);
     let r = await request.get(url).
       ca(cert).
       auth(this.credentials.username, this.credentials.password).
       query(params).
       accept('application/json').end();
     let releases = r.body.releases;
-    log.debug("got releases: %j", releases);
+    log.debug("got releases:", releases);
     if (!options.includeLatest) {
       releases = _.filter(releases, (release) => ! _.endsWith(release.name, '-latest'));
     }
     releases = _.sortByOrder(releases, 'name', ! options.reverse);
     releases = _.take(releases, options.limit);
-    log.debug("filtered: %j", releases);
+    log.debug("filtered:", releases);
     return releases;
   }
 
@@ -52,7 +52,7 @@ export class BalrogClient {
       ca(cert).
       auth(this.credentials.username, this.credentials.password).
       accept('application/json').end();
-    log.debug("Got build: %j", r.body);
+    log.debug("Got build:", r.body);
     return r.body;
   }
 }

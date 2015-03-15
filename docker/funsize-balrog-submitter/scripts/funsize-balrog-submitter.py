@@ -12,6 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__),
                 "/home/worker/tools/lib/python"))
 
 from balrog.submitter.cli import NightlySubmitterV4
+from util.retry import retry
 
 
 if __name__ == '__main__':
@@ -49,9 +50,10 @@ if __name__ == '__main__':
 
     auth = (balrog_username, balrog_password)
     submitter = NightlySubmitterV4(args.api_root, auth, args.dummy)
-    submitter.run(
+    retry(lambda: submitter.run(
         platform=manifest["platform"], buildID=manifest["to_buildid"],
         productName=manifest["appName"], branch=manifest["branch"],
         appVersion=manifest["version"], locale=manifest["locale"],
         hashFunction='sha512', extVersion=manifest["version"],
         partialInfo=partialInfo)
+    )
