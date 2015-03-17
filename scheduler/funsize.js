@@ -31,6 +31,7 @@ async function main() {
     parse(process.argv);
   log.info("loading from", program.config);
   let config = require(program.config);
+  log.info("config loaded from", program.config);
   if (config.funsize.logDir) {
     setLogDir(config.funsize.logDir);
   }
