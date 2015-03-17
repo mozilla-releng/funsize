@@ -20,6 +20,6 @@ module.exports = {
     }
   },
   funsize: {
-    logDir: '/home/worker/funsize-logs'
+    //logDir: process.env.FUNSIZE_LOGDIR
   }
 };

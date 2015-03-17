@@ -5,7 +5,7 @@ export var log = new (winston.Logger)(
   {transports: [
     new (winston.transports.Console)({
       timestamp: true,
-      level: 'info',
+      level: process.env.FUNSIZE_LOG_LEVEL || 'info',
       prettyPrint: true
     })
    ]
