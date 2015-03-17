@@ -2,7 +2,7 @@ module.exports = {
   balrog: {
     api_root: process.env.BALROG_API_ROOT,
     credentials: {
-      username: process.env.BALROG_PASSWORD,
+      username: process.env.BALROG_USERNAME,
       password: process.env.BALROG_PASSWORD
     }
   },
