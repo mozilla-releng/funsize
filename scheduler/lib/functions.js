@@ -64,6 +64,15 @@ var propertiesToObject = function(props){
 };
 
 export async function processMessage(message, scheduler, config) {
+  try {
+    return await doProcessMessage(message, scheduler, config);
+  } catch (err) {
+    log.error(`Error ${err}:
+${err.stack}
+`);
+  }
+}
+export async function doProcessMessage(message, scheduler, config) {
   let payload = message.payload.payload;
   if (!interestingBuilderName(payload.build.builderName)) {
     log.debug("ignoring %s %s", payload.build.builderName, message.routingKey);
