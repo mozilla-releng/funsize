@@ -41,6 +41,7 @@ async function main() {
   let bindings = [];
   // TODO: Need to check if the bindings are only thiese ones
   for (let pattern of routingKeyPatterns()) {
+    log.info(`Binding ${pattern}`);
     bindings.push(
       listener.bind({
         exchange: 'exchange/build/',
