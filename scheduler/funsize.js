@@ -18,7 +18,7 @@ function routingKeyPatterns() {
     for (let platform of platforms) {
       jobs = jobs.concat([
         `build.${branch}-${platform}-nightly.*.finished`,
-        `build.${branch}-${platform}-l10n-nightly.*.finished`
+  // Disabled      `build.${branch}-${platform}-l10n-nightly.*.finished`
       ]);
     }
   }
