@@ -1,6 +1,7 @@
 module.exports = {
   balrog: {
     api_root: process.env.BALROG_API_ROOT,
+    // cert: 'file name in data dir',
     credentials: {
       username: process.env.BALROG_USERNAME,
       password: process.env.BALROG_PASSWORD
