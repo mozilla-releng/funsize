@@ -37,15 +37,24 @@ export class BalrogClient {
       r.ca(this.cert);
     }
     await r.end();
-    let releases = r.body.releases;
-    log.debug("got releases:", releases);
-    if (!options.includeLatest) {
-      releases = _.filter(releases, (release) => ! _.endsWith(release.name, '-latest'));
+      try {
+      let releases = r.body.releases;
+      log.debug("got releases:", releases);
+      if (!options.includeLatest) {
+        releases = _.filter(releases, (release) => ! _.endsWith(release.name, '-latest'));
+      }
+      releases = _.sortByOrder(releases, 'name', ! options.reverse);
+      releases = _.take(releases, options.limit);
+      log.debug("filtered:", releases);
+      return releases;
+    } catch (err) {
+      log.error(`Error in release blob ${err}
+${err.stack}
+`);
+      log.error(`Response was
+${r.body}
+`);
     }
-    releases = _.sortByOrder(releases, 'name', ! options.reverse);
-    releases = _.take(releases, options.limit);
-    log.debug("filtered:", releases);
-    return releases;
   }
 
   async getBuild(release, platform, locale) {
