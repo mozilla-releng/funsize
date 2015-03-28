@@ -32,7 +32,7 @@ export class BalrogClient {
     };
     log.debug("Fetching %s with params", url, params);
     let r = await request.get(url).
-      r.ca(this.cert).
+      ca(this.cert).
       auth(this.credentials.username, this.credentials.password).
       query(params).
       accept('application/json').
@@ -53,7 +53,7 @@ export class BalrogClient {
     let url = `${this.api_root}/releases/${release}/builds/${balrog_platform}/${locale}`;
     log.debug("Fetching %s", url);
     let r = await request.get(url).
-      r.ca(this.cert).
+      ca(this.cert).
       auth(this.credentials.username, this.credentials.password).
       accept('application/json').
       end();
