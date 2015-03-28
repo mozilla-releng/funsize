@@ -45,9 +45,9 @@ var interestingBuilderName = function (builderName){
   let builders = [];
   for (let branch of branches) {
     builders = builders.concat([
-      `WINNT \d+\.\d+ (x86-64 )?${branch} nightly`,
-      `Linux (x86-64 )?${branch} nightly`,
-      `OS X \d+\.\d+ ${branch} nightly`,
+      `(TB )?WINNT \d+\.\d+ (x86-64 )?${branch} nightly`,
+      `(TB )?Linux (x86-64 )?${branch} nightly`,
+      `(TB )?OS X \d+\.\d+ ${branch} nightly`,
       `(Thunderbird|Firefox) ${branch} (linux|linux64|win32|win64|mac) l10n nightly`
     ]);
   }
