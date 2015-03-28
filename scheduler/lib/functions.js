@@ -36,6 +36,8 @@ async function encryptEnv(taskId, startTime, endTime, name, value) {
 
 // TODO: compile the regexps only once
 var interestingBuilderName = function (builderName){
+  // always satisfy for now
+  return true;
   let branches = [
     'mozilla-central',
     'mozilla-aurora',
