@@ -13,6 +13,8 @@ export class BalrogClient {
     this.credentials = credentials;
     if (cert) {
       this.cert = fs.readFileSync(path.join(__dirname, '../data', cert));
+    } else {
+      this.cert = null;
     }
   }
 
@@ -29,45 +31,32 @@ export class BalrogClient {
       name_prefix: `${product}-${branch}`
     };
     log.debug("Fetching %s with params", url, params);
-    let r = request.get(url).
+    let r = await request.get(url).
+      r.ca(this.cert).
       auth(this.credentials.username, this.credentials.password).
       query(params).
-      accept('application/json');
-    if (this.cert) {
-      r.ca(this.cert);
+      accept('application/json').
+      end();
+    let releases = r.body.releases;
+    log.debug("got releases:", releases);
+    if (!options.includeLatest) {
+      releases = _.filter(releases, (release) => ! _.endsWith(release.name, '-latest'));
     }
-    await r.end();
-      try {
-      let releases = r.body.releases;
-      log.debug("got releases:", releases);
-      if (!options.includeLatest) {
-        releases = _.filter(releases, (release) => ! _.endsWith(release.name, '-latest'));
-      }
-      releases = _.sortByOrder(releases, 'name', ! options.reverse);
-      releases = _.take(releases, options.limit);
-      log.debug("filtered:", releases);
-      return releases;
-    } catch (err) {
-      log.error(`Error in release blob ${err}
-${err.stack}
-`);
-      log.error(`Response was
-${r.body}
-`);
-    }
+    releases = _.sortByOrder(releases, 'name', ! options.reverse);
+    releases = _.take(releases, options.limit);
+    log.debug("filtered:", releases);
+    return releases;
   }
 
   async getBuild(release, platform, locale) {
     let balrog_platform = platform_map[platform][0];
     let url = `${this.api_root}/releases/${release}/builds/${balrog_platform}/${locale}`;
     log.debug("Fetching %s", url);
-    let r = request.get(url).
+    let r = await request.get(url).
+      r.ca(this.cert).
       auth(this.credentials.username, this.credentials.password).
-      accept('application/json');
-    if (this.cert) {
-      r.ca(this.cert);
-    }
-    await r.end();
+      accept('application/json').
+      end();
     log.debug("Got build:", r.body);
     return r.body;
   }
