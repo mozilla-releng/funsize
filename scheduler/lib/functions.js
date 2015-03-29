@@ -35,9 +35,7 @@ async function encryptEnv(taskId, startTime, endTime, name, value) {
 }
 
 // TODO: compile the regexps only once
-var interestingBuilderName = function (builderName){
-  // always satisfy for now
-  return true;
+export function interestingBuilderName(builderName) {
   let branches = [
     'mozilla-central',
     'mozilla-aurora',
@@ -47,16 +45,16 @@ var interestingBuilderName = function (builderName){
   let builders = [];
   for (let branch of branches) {
     builders = builders.concat([
-      `(TB )?WINNT \d+\.\d+ (x86-64 )?${branch} nightly`,
+      `(TB )?WINNT \\d+\\.\\d+ (x86-64 )?${branch} nightly`,
       `(TB )?Linux (x86-64 )?${branch} nightly`,
-      `(TB )?OS X \d+\.\d+ ${branch} nightly`,
+      `(TB )?OS X \\d+\\.\\d+ ${branch} nightly`,
       `(Thunderbird|Firefox) ${branch} (linux|linux64|win32|win64|mac) l10n nightly`
     ]);
   }
   return builders.some(function(builder){
     return RegExp(builder).test(builderName);
   });
-};
+}
 
 var propertiesToObject = function(props){
   return props.reduce(function(obj, prop){

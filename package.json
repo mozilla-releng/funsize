@@ -9,7 +9,8 @@
     "url": "https://github.com/rail/funsize-taskcluster"
   },
   "scripts": {
-    "funsize": "./node_modules/.bin/babel-node --experimental funsize.js --config ~/Private/funsizeconfig.js"
+    "funsize": "./node_modules/.bin/babel-node --experimental funsize.js --config ~/Private/funsizeconfig.js",
+    "test": "./node_modules/.bin/mocha --require scheduler/test/babelhook.js --reporter spec scheduler/test"
   },
   "dependencies": {
     "babel": "^4.7.3",
@@ -23,5 +24,9 @@
     "superagent-promise": "^0.2.0",
     "taskcluster-client": "^0.22.0-alpha",
     "winston": "^0.9.0"
+  },
+  "devDependencies": {
+    "babel": "^4.7.16",
+    "mocha": "^2.2.1"
   }
 }
