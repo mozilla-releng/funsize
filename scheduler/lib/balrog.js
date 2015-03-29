@@ -28,7 +28,8 @@ export class BalrogClient {
     let url = `${this.api_root}/releases`;
     let params = {
       product: product,
-      name_prefix: `${product}-${branch}`
+      // add nightly-2 to filter out not dated blobs
+      name_prefix: `${product}-${branch}-nightly-2`
     };
     log.debug("Fetching %s with params", url, params);
     let r = await request.get(url).

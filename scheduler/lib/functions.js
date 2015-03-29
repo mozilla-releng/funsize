@@ -98,22 +98,8 @@ export async function doProcessMessage(message, scheduler, config) {
   log.debug("From:", build_from);
   let build_to = await c.getBuild(_.first(releases).name, platform, locale);
   log.debug("To:", build_from);
-  let fromMAR, toMAR;
-  if (build_from.completes) {
-    log.debug("Using array of completes for build_from");
-    fromMAR = build_from["completes"][0]["fileUrl"];
-  } else {
-    log.debug("Using complete for build_from");
-    fromMAR = build_from["complete"]["fileUrl"];
-  }
-  if (build_to.completes) {
-    log.debug("Using array of completes for build_to");
-    toMAR = build_to["completes"][0]["fileUrl"];
-  } else {
-    log.debug("Using complete for build_to");
-    toMAR = build_to["complete"]["fileUrl"];
-  }
-
+  let fromMAR = _.first(build_from.completes).fileUrl;
+  let toMAR = _.first(build_to.completes).fileUrl;
   log.debug("Updates from %s to %s", fromMAR, toMAR);
   log.info("creatig task for %s", message.routingKey);
   await create_task_graph(scheduler, platform, locale, fromMAR, toMAR, config);
