@@ -1,4 +1,8 @@
 language: node_js
+
+# http://docs.travis-ci.com/user/workers/container-based-infrastructure/
+sudo: false
+
 deploy:
   provider: heroku
   app: funsize-dev
