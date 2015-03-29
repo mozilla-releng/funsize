@@ -98,8 +98,8 @@ export async function doProcessMessage(message, scheduler, config) {
   log.debug("From:", build_from);
   let build_to = await c.getBuild(_.first(releases).name, platform, locale);
   log.debug("To:", build_from);
-  let fromMAR = build_from["completes"][0]["fileUrl"];
-  let toMAR = build_to["completes"][0]["fileUrl"];
+  let fromMAR = build_from["complete"]["fileUrl"];
+  let toMAR = build_to["complete"]["fileUrl"];
   log.debug("Updates from %s to %s", fromMAR, toMAR);
   log.info("creatig task for %s", message.routingKey);
   await create_task_graph(scheduler, platform, locale, fromMAR, toMAR, config);
