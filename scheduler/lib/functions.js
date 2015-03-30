@@ -137,4 +137,5 @@ async function create_task_graph(scheduler, platform, locale, fromMAR, toMAR, co
   let result = await scheduler.createTaskGraph(graphId, taskGraph);
   log.debug("Result:", result.status);
   log.info("Result: %s %s", result.status.state, result.status.taskGraphId);
+  log.info(`TaskGraph URL: https://tools.taskcluster.net/task-graph-inspector/#${result.status.taskGraphId}`);
 }
