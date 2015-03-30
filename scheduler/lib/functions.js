@@ -80,9 +80,9 @@ export async function doProcessMessage(message, scheduler, config) {
     return;
   }
   if (payload.results !== 0) {
-    log.debug("ignoring %s/%s with non zero (%s) result",
-              payload.build.builderName, message.routingKey,
-              payload.results);
+    log.info("ignoring %s/%s with non zero (%s) result",
+             payload.build.builderName, message.routingKey,
+             payload.results);
     return;
   }
   let props = propertiesToObject(payload.build.properties);
@@ -101,7 +101,7 @@ export async function doProcessMessage(message, scheduler, config) {
   log.debug("To:", build_from);
   let fromMAR = _.first(build_from.completes).fileUrl;
   let toMAR = _.first(build_to.completes).fileUrl;
-  log.debug("Updates from %s to %s", fromMAR, toMAR);
+  log.info("Updates from %s to %s", fromMAR, toMAR);
   log.info("creatig task for %s", message.routingKey);
   await create_task_graph(scheduler, platform, locale, fromMAR, toMAR, config);
 }
