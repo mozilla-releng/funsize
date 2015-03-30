@@ -13,7 +13,7 @@ function routingKeyPatterns() {
     // 'comm-central',
     // 'comm-aurora'
   ];
-  let platforms = [ 'linux', 'linux64', 'win32', 'win64', 'mac' ];
+  let platforms = [ 'linux', 'linux64', 'win32', 'win64', 'macosx64' ];
   let jobs = [];
   for (let branch of branches) {
     for (let platform of platforms) {
