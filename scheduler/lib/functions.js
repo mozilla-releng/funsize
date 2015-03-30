@@ -39,8 +39,9 @@ export function interestingBuilderName(builderName) {
   let branches = [
     'mozilla-central',
     'mozilla-aurora',
-    'comm-central',
-    'comm-aurora'
+    // Thunderbird hasn't switched to mozharness yet
+    // 'comm-central',
+    // 'comm-aurora'
   ];
   let builders = [];
   for (let branch of branches) {

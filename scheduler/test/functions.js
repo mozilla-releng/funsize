@@ -10,9 +10,10 @@ suite('interestingBuilderName', () => {
   test('should match Firefox Win nightly build', () => {
     assert(interestingBuilderName('WINNT 5.2 mozilla-aurora nightly'));
   });
-  test('should match Thunderbird nightly build', () => {
-    assert(interestingBuilderName('TB WINNT 5.2 comm-aurora nightly'));
-  });
+  // Thunderbid hasn't switched to mozharness yet
+  // test('should match Thunderbird nightly build', () => {
+  //   assert(interestingBuilderName('TB WINNT 5.2 comm-aurora nightly'));
+  // });
   test('should match Firefox win64 nightly build', () => {
     assert(interestingBuilderName('WINNT 6.1 x86-64 mozilla-aurora nightly'));
   });

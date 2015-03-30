@@ -9,8 +9,9 @@ function routingKeyPatterns() {
   let branches = [
     'mozilla-central',
     'mozilla-aurora',
-    'comm-central',
-    'comm-aurora'
+    // Thunderbird hasn't switched to mozharness yet
+    // 'comm-central',
+    // 'comm-aurora'
   ];
   let platforms = [ 'linux', 'linux64', 'win32', 'win64', 'mac' ];
   let jobs = [];
@@ -18,7 +19,8 @@ function routingKeyPatterns() {
     for (let platform of platforms) {
       jobs = jobs.concat([
         `build.${branch}-${platform}-nightly.*.finished`,
-  // Disabled      `build.${branch}-${platform}-l10n-nightly.*.finished`
+        // L10N hasn't switched to mozharness yet
+        // `build.${branch}-${platform}-l10n-nightly.*.finished`
       ]);
     }
   }
