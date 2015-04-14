@@ -49,7 +49,7 @@ export function interestingBuilderName(builderName) {
       `(TB )?WINNT \\d+\\.\\d+ (x86-64 )?${branch} nightly`,
       `(TB )?Linux (x86-64 )?${branch} nightly`,
       `(TB )?OS X \\d+\\.\\d+ ${branch} nightly`,
-      `(Thunderbird|Firefox) ${branch} (linux|linux64|win32|win64|mac) l10n nightly`
+      `(Thunderbird|Firefox) ${branch} (linux|linux64|win32|win64|mac) l10n nightly-\\d+`
     ]);
   }
   return builders.some(function(builder){
@@ -57,12 +57,17 @@ export function interestingBuilderName(builderName) {
   });
 }
 
-var propertiesToObject = function(props){
+
+function isL10nBuilder(builderName) {
+  return builderName.indexOf(" l10n ") !== -1;
+}
+
+function propertiesToObject(props) {
   return props.reduce(function(obj, prop){
     obj[prop[0]] = prop[1];
     return obj;
   }, {});
-};
+}
 
 export async function processMessage(message, scheduler, config) {
   try {
@@ -86,10 +91,26 @@ export async function doProcessMessage(message, scheduler, config) {
     return;
   }
   let props = propertiesToObject(payload.build.properties);
-  let locale = props.locale || 'en-US';
-  let platform = props.platform;
-  let branch = props.branch;
-  let product = props.appName;
+  if (props.locales) {
+    // L10N repacks
+    let platform = props.funsize_info.platform;
+    let branch = props.funsize_info.branch;
+    let product = props.funsize_info.appName;
+
+    for (let locale in props.locales) {
+      if (props.locales[locale] === "Success") {
+        await createPartialTask(product, branch, platform, locale, config, scheduler);
+      } else {
+        log.warning("Skipping %s (%s)", payload.build.builderName, locale);
+      }
+    }
+  } else {
+    // en-US build
+    await createPartialTask(props.appName, props.branch, props.platform, 'en-US', config, scheduler);
+  }
+}
+
+async function createPartialTask(product, branch, platform, locale, config, scheduler) {
   log.info("Processing %s %s %s %s", product, branch, platform, locale);
   let c = new BalrogClient(config.balrog.api_root, config.balrog.credentials, config.balrog.cert);
   // Get last 3 releases to generate a partial N-2 to N, because N-1 vs N is
@@ -102,7 +123,6 @@ export async function doProcessMessage(message, scheduler, config) {
   let fromMAR = _.first(build_from.completes).fileUrl;
   let toMAR = _.first(build_to.completes).fileUrl;
   log.info("Updates from %s to %s", fromMAR, toMAR);
-  log.info("creatig task for %s", message.routingKey);
   await create_task_graph(scheduler, platform, locale, fromMAR, toMAR, config);
 }
 
