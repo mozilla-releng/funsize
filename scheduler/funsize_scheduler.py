@@ -7,8 +7,9 @@ import requests
 import taskcluster
 import yaml
 import time
-import sh
-import base64
+
+from kombu import Exchange, Queue, Connection
+from kombu.mixins import ConsumerMixin
 
 from taskcluster.utils import slugId, fromNow, stringDate
 from release.platforms import buildbot2updatePlatforms
@@ -16,6 +17,55 @@ from mozillapulse.config import PulseConfiguration
 from mozillapulse.consumers import BuildConsumer
 
 log = logging.getLogger(__name__)
+
+BRANCHES = ['mozilla-central', 'mozilla-aurora']
+PLATFORMS = ['linux', 'linux64', 'win32', 'win64', 'macosx64']
+
+
+class FunsizeWorker(ConsumerMixin):
+
+    def __init__(self, connection, queue_name):
+        self.connection = connection
+        self.exchange = Exchange('exchange/build/', type='topic', passive=True)
+        self.queue_name = queue_name
+
+    @property
+    def routing_keys(self):
+        jobs = [
+            'build.{branch}-{platform}-nightly.*.finished',
+            # TODO: find a better way to specify these
+            'build.{branch}-{platform}-l10n-nightly-1.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-2.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-3.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-4.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-5.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-6.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-7.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-8.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-9.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-10.*.finished',
+        ]
+        return [job.format(branch=branch, platform=platform)
+                for job in jobs
+                for branch in BRANCHES
+                for platform in PLATFORMS]
+
+    @property
+    def queues(self):
+        return [Queue(name=self.queue_name, exchange=self.exchange,
+                      routing_key=routing_key, durable=True, exclusive=False,
+                      auto_delete=False)
+                for routing_key in self.routing_keys]
+
+    def get_consumers(self, Consumer, channel):
+        return [Consumer(queues=self.queues, callbacks=[self.process_message])]
+
+    def process_message(self, body, message):
+        print body
+        exit(1)
+
+    def on_consume_ready(self, connection, channel, consumers):
+        log.info("Listening...")
 
 
 class BalrogClient(object):
@@ -66,13 +116,7 @@ def encrypt_env_var(task_id, start_time, end_time, name, value):
         "value": value
     }
     message = str(json.dumps(message))
-    return encrypt_openpgpjs(message)
-
-
-def encrypt_openpgpjs(message):
-    message = base64.b64encode(message)
-    ret = sh.node("openpgpjs_encrypt.js", message)
-    return ret.strip()
+    return None  # TODO: use pgpy
 
 
 def create_task_graph(platform, locale, from_mar, to_mar, secrets):
@@ -212,20 +256,13 @@ def create_task_graph(platform, locale, from_mar, to_mar, secrets):
 
 
 def interesting_buildername(buildername):
-    branches = [
-        "mozilla-central",
-        "mozilla-aurora",
-        "comm-central",
-        "comm-aurora",
-    ]
     builders = [
-        r"WINNT \d+\.\d+ (x86-64 )?{branch} nightly",
-        r"Linux (x86-64 )?{branch} nightly",
-        r"OS X \d+\.\d+ {branch} nightly",
-        r"(Thunderbird|Firefox) {branch} (linux|linux64|win32|win64|mac)"
-        " l10n nightly",
+        r'WINNT \d+\.\d+ (x86-64 )?${branch} nightly',
+        r'Linux (x86-64 )?${branch} nightly',
+        r'OS X \d+\.\d+ ${branch} nightly',
+        r'Firefox ${branch} (linux|linux64|win32|win64|mac) l10n nightly-\d+',
     ]
-    interesting_names = [n.format(branch=b) for b in branches for n in
+    interesting_names = [n.format(branch=b) for b in BRANCHES for n in
                          builders]
     return any(re.match(n, buildername) for n in interesting_names)
 
@@ -239,7 +276,7 @@ def process_message(data, message, balrog_client):
         message.ack()
 
 
-def get_properties_dict(props):
+def properties_to_dict(props):
     """Convert properties tuple into dict"""
     props_dict = {}
     for prop in props:
@@ -250,13 +287,13 @@ def get_properties_dict(props):
 def do_process_message(data, balrog_client):
     buildername = data["payload"]["build"]["builderName"]
     properties = data["payload"]["build"]["properties"]
-    properties = get_properties_dict(properties)
+    properties = properties_to_dict(properties)
     result = data["payload"]["results"]
-    if result != 0:
-        # log.debug("Ignoring %s with result %s", buildername, result)
-        return
     if not interesting_buildername(buildername):
-        # log.debug("Ignoring %s: not interested", buildername)
+        log.debug("Ignoring %s: not interested", buildername)
+        return
+    if result != 0:
+        log.debug("Ignoring %s with result %s", buildername, result)
         return
     locale = properties.get("locale", "en-US")
     platform = properties["platform"]
@@ -314,6 +351,14 @@ if __name__ == '__main__':
     logging.getLogger("requests").setLevel(logging.WARN)
     logging.getLogger("taskcluster").setLevel(logging.WARN)
     logging.getLogger("hawk").setLevel(logging.WARN)
-    logging.getLogger("sh").setLevel(logging.WARN)
     secrets = yaml.safe_load(args.secrets)
-    main(args.balrog_api_root, secrets)
+    # main(args.balrog_api_root, secrets)
+    with Connection(hostname='pulse.mozilla.org', port=5671,
+                    userid=secrets["pulse"]["credentials"]["user"],
+                    password=secrets["pulse"]["credentials"]["password"],
+                    virtual_host='/', ssl=True) as conn:
+        queue_name = 'queue/{user}/{queue_name}'.format(
+            user=secrets["pulse"]["credentials"]["user"],
+            queue_name=secrets["pulse"]["queue_name"],
+        )
+        FunsizeWorker(conn, queue_name).run()

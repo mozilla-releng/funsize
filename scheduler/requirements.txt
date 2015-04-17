@@ -6,7 +6,6 @@ Twisted==15.0.0
 amqp==1.4.6
 anyjson==0.3.3
 argparse==1.2.1
-buildtools==1.0.6
 docopt==0.6.2
 furl==0.4.4
 iso8601==0.1.10
