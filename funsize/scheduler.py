@@ -27,8 +27,8 @@ BUILDERS = [
     r'OS X \d+\.\d+ {branch} nightly',
     r'Firefox {branch} (linux|linux64|win32|win64|macosx64) l10n nightly-\d+',
 ]
-PLATFORM_MAP = json.load(open(os.path.join(os.path.dirname(__file__), "data",
-                                           "platform_map.json")))
+PLATFORM_MAP = json.load(open(
+    os.path.join(os.path.dirname(__file__), "data", "platform_map.json")))
 
 
 class FunsizeWorker(ConsumerMixin):
@@ -79,6 +79,7 @@ class FunsizeWorker(ConsumerMixin):
         except Exception:
             log.exception("Cought an error")
         else:
+            # TODO: figure out what to do with failed tasks
             message.ack()
 
     def on_consume_ready(self, connection, channel, consumers):
@@ -265,7 +266,6 @@ if __name__ == '__main__':
     balrog_client = BalrogClient(
         api_root=secrets["balrog"]["api_root"],
         auth=(secrets["balrog"]["username"], secrets["balrog"]["password"]),
-        # cert="mozilla-root.crt"
     )
     scheduler = taskcluster.Scheduler(secrets["taskcluster"])
     queue_name = 'queue/{user}/{queue_name}'.format(
