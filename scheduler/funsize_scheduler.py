@@ -24,9 +24,10 @@ PLATFORMS = ['linux', 'linux64', 'win32', 'win64', 'macosx64']
 
 class FunsizeWorker(ConsumerMixin):
 
-    def __init__(self, connection, queue_name):
+    def __init__(self, connection, queue_name, exchange):
         self.connection = connection
-        self.exchange = Exchange('exchange/build/', type='topic', passive=True)
+        # Using passive mode is important, otherwise pulse returns 403
+        self.exchange = Exchange(exchange, type='topic', passive=True)
         self.queue_name = queue_name
 
     @property
@@ -339,8 +340,6 @@ def main(api_root, secrets):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--secrets", required=True, type=argparse.FileType())
-    parser.add_argument("--balrog-api-root",
-                        default="https://aus4-admin.mozilla.org/api")
     parser.add_argument("-v", "--verbose", dest="log_level",
                         action="store_const", const=logging.DEBUG,
                         default=logging.INFO)
@@ -352,13 +351,13 @@ if __name__ == '__main__':
     logging.getLogger("taskcluster").setLevel(logging.WARN)
     logging.getLogger("hawk").setLevel(logging.WARN)
     secrets = yaml.safe_load(args.secrets)
-    # main(args.balrog_api_root, secrets)
+    # main(secrets["balrog"]["api_root"], secrets)
     with Connection(hostname='pulse.mozilla.org', port=5671,
-                    userid=secrets["pulse"]["credentials"]["user"],
-                    password=secrets["pulse"]["credentials"]["password"],
+                    userid=secrets["pulse"]["user"],
+                    password=secrets["pulse"]["password"],
                     virtual_host='/', ssl=True) as conn:
         queue_name = 'queue/{user}/{queue_name}'.format(
-            user=secrets["pulse"]["credentials"]["user"],
-            queue_name=secrets["pulse"]["queue_name"],
+            user=secrets["pulse"]["user"],
+            queue_name=secrets["pulse"]["queue"],
         )
-        FunsizeWorker(conn, queue_name).run()
+        FunsizeWorker(conn, queue_name, secrets["pulse"]["exchange"]).run()
