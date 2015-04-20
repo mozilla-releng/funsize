@@ -11,10 +11,10 @@ scopes:
   - scheduler:*
 
 tasks:
-  - taskId: '{{updateGeneratorTaskId}}'
+  - taskId: '{{update_generator_task_id}}'
     task:
       created: '{{now}}'
-      deadline: '{{#fromNowJSON}}2 hours{{/fromNowJSON}}'
+      deadline: '{{#fromNow}}2 hours{{/fromNow}}'
       metadata:
         owner: release+funsize@mozilla.com
         source: https://github.com/rail/funsize-taskcluster
@@ -35,8 +35,8 @@ tasks:
             - /runme.sh
 
         env:
-          FROM_MAR: '{{{fromMAR}}}'
-          TO_MAR: '{{{toMAR}}}'
+          FROM_MAR: '{{{from_MAR}}}'
+          TO_MAR: '{{{to_MAR}}}'
           PLATFORM: '{{platform}}'
           LOCALE: '{{locale}}'
 
@@ -44,14 +44,14 @@ tasks:
           'public/env':
             path: /home/worker/artifacts/
             type: directory
-            expires: '{{#fromNowJSON}}7 days{{/fromNowJSON}}'
+            expires: '{{#fromNow}}7 days{{/fromNow}}'
 
-  - taskId: '{{signingTaskId}}'
+  - taskId: '{{signing_task_id}}'
     requires:
-      - '{{updateGeneratorTaskId}}'
+      - '{{update_generator_task_id}}'
     task:
       created: '{{now}}'
-      deadline: '{{#fromNowJSON}}2 hours{{/fromNowJSON}}'
+      deadline: '{{#fromNow}}2 hours{{/fromNow}}'
       metadata:
         owner: release+funsize@mozilla.com
         source: https://github.com/rail/funsize-taskcluster
@@ -72,20 +72,20 @@ tasks:
             - /runme.sh
 
         env:
-          PARENT_TASK_ARTIFACTS_URL_PREFIX: 'https://queue.taskcluster.net/v1/task/{{updateGeneratorTaskId}}/artifacts/public/env'
+          PARENT_TASK_ARTIFACTS_URL_PREFIX: 'https://queue.taskcluster.net/v1/task/{{update_generator_task_idsigni}}/artifacts/public/env'
 
         artifacts:
           'public/env':
             path: /home/worker/artifacts/
             type: directory
-            expires: '{{#fromNowJSON}}7 days{{/fromNowJSON}}'
+            expires: '{{#fromNow}}7 days{{/fromNow}}'
 
-  - taskId: '{{balrogTaskId}}'
+  - taskId: '{{balrog_task_id}}'
     requires:
-      - '{{signingTaskId}}'
+      - '{{signing_task_id}}'
     task:
       created: '{{now}}'
-      deadline: '{{#fromNowJSON}}2 hours{{/fromNowJSON}}'
+      deadline: '{{#fromNow}}2 hours{{/fromNow}}'
       metadata:
         owner: release+funsize@mozilla.com
         source: https://github.com/rail/funsize-taskcluster
@@ -106,7 +106,7 @@ tasks:
             - /runme.sh
 
         env:
-          PARENT_TASK_ARTIFACTS_URL_PREFIX: 'https://queue.taskcluster.net/v1/task/{{signingTaskId}}/artifacts/public/env'
+          PARENT_TASK_ARTIFACTS_URL_PREFIX: 'https://queue.taskcluster.net/v1/task/{{signing_task_id}}/artifacts/public/env'
           BALROG_API_ROOT: 'https://aus4-admin-dev.allizom.org/api'
         encryptedEnv:
           - '{{{BALROG_USERNAME_ENC_MESSAGE}}}'
