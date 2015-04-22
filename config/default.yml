@@ -1,0 +1,16 @@
+---
+balrog:
+    username: null
+    password: null
+    api_root: https://aus4-admin-dev.allizom.org/api
+
+pulse:
+    user: null
+    password: null
+    queue: funsize
+    exchange: "exchange/build/"
+
+taskcluster:
+    credentials:
+      clientId: null
+      accessToken: null
