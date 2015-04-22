@@ -14,7 +14,9 @@ log = logging.getLogger(__name__)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--secrets", required=True, type=argparse.FileType())
+    parser.add_argument("-c", "--config", required=True,
+                        type=argparse.FileType(),
+                        help="YAML configuration file")
     parser.add_argument("-v", "--verbose", dest="log_level",
                         action="store_const", const=logging.DEBUG,
                         default=logging.INFO)
@@ -25,21 +27,38 @@ if __name__ == '__main__':
     logging.getLogger("requests").setLevel(logging.WARN)
     logging.getLogger("taskcluster").setLevel(logging.WARN)
     logging.getLogger("hawk").setLevel(logging.WARN)
-    secrets = yaml.safe_load(args.secrets)
-    balrog_client = BalrogClient(
-        api_root=secrets["balrog"]["api_root"],
-        auth=(secrets["balrog"]["username"], secrets["balrog"]["password"]),
+    config = yaml.safe_load(args.config)
+
+    api_root = os.environ.get("BALROG_API_ROOT", config["balrog"]["api_root"])
+    auth = (
+        os.environ.get("BALROG_USERNAME", config["balrog"]["username"]),
+        os.environ.get("BALROG_PASSWORD", config["balrog"]["password"]),
     )
-    scheduler = taskcluster.Scheduler(secrets["taskcluster"])
-    queue_name = 'queue/{user}/{queue_name}'.format(
-        user=secrets["pulse"]["user"],
-        queue_name=secrets["pulse"]["queue"],
-    )
+    pulse_user = os.environ.get("PULSE_USERNAME", config["pulse"]["user"])
+    pulse_password = os.environ.get("PULSE_PASSWORD",
+                                    config["pulse"]["password"])
+    queue_name = os.environ.get("PULSE_QUEUE_NAME", config["pulse"]["queue"])
+    queue_name = 'queue/{user}/{queue_name}'.format(user=pulse_user,
+                                                    queue_name=queue_name)
+    if "TASKCLUSTER_CLIENTID" in os.environ and \
+            "TASKCLUSTER_ACCESS_TOKEN" in os.environ:
+        tc_opts = {
+            "credentials": {
+                "clientId": os.environ["TASKCLUSTER_CLIENTID"],
+                "accessToken": os.environ["TASKCLUSTER_ACCESS_TOKEN"]
+            }
+        }
+    else:
+        tc_opts = config["taskcluster"]
+
+    balrog_client = BalrogClient(api_root=api_root, auth=auth)
+    scheduler = taskcluster.Scheduler(tc_opts)
+
     with Connection(hostname='pulse.mozilla.org', port=5671,
-                    userid=secrets["pulse"]["user"],
-                    password=secrets["pulse"]["password"],
+                    userid=config["pulse"]["user"],
+                    password=pulse_password,
                     virtual_host='/', ssl=True) as connection:
         FunsizeWorker(connection=connection, queue_name=queue_name,
-                      exchange=secrets["pulse"]["exchange"],
+                      exchange=config["pulse"]["exchange"],
                       balrog_client=balrog_client,
                       scheduler=scheduler).run()

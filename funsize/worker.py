@@ -95,7 +95,7 @@ class FunsizeWorker(ConsumerMixin):
             self.dispatch_message(body)
         except Exception:
             log.exception("Failed to process message")
-        else:
+        finally:
             # TODO: figure out what to do with failed tasks
             message.ack()
 
@@ -132,7 +132,7 @@ class FunsizeWorker(ConsumerMixin):
             for locale, result in properties["locales"]:
                 if result.lower() == "success":
                     self.create_partial(product, branch, platform,
-                                              locale)
+                                        locale)
                 else:
                     log.warn("Ignoring %s with result %s", locale, result)
         else:

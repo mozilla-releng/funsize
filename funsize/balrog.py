@@ -6,7 +6,7 @@ import json
 log = logging.getLogger(__name__)
 
 PLATFORM_MAP = json.load(open(
-    os.path.join(os.path.dirname(__file__), "data", "platform_map.json")))
+    os.path.join(os.path.dirname(__file__), 'data', 'platform_map.json')))
 
 
 class BalrogClient(object):
@@ -15,7 +15,7 @@ class BalrogClient(object):
         self.api_root = api_root
         self.auth = auth
         if cert:
-            self.verify = os.path.join(os.path.dirname(__file__), "data", cert)
+            self.verify = os.path.join(os.path.dirname(__file__), 'data', cert)
         else:
             self.verify = True
 

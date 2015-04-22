@@ -72,7 +72,7 @@ tasks:
             - /runme.sh
 
         env:
-          PARENT_TASK_ARTIFACTS_URL_PREFIX: 'https://queue.taskcluster.net/v1/task/{{update_generator_task_idsigni}}/artifacts/public/env'
+          PARENT_TASK_ARTIFACTS_URL_PREFIX: 'https://queue.taskcluster.net/v1/task/{{update_generator_task_id}}/artifacts/public/env'
 
         artifacts:
           'public/env':
