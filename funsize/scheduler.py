@@ -1,6 +1,5 @@
 import argparse
 import logging
-
 import site
 import taskcluster
 import yaml
