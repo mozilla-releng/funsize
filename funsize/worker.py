@@ -141,9 +141,8 @@ class FunsizeWorker(ConsumerMixin):
                     log.warn("Ignoring %s with result %s", locale, result)
         else:
             log.debug("en-US build detected")
-            self.create_partial(properties["appName"],
-                                       properties["branch"],
-                                       properties["platform"], 'en-US')
+            self.create_partial(properties["appName"], properties["branch"],
+                                properties["platform"], 'en-US')
 
     def create_partial(self, product, branch, platform, locale):
         """Calculates "from" and "to" MAR URLs and calls  create_task_graph().
@@ -191,7 +190,7 @@ class FunsizeWorker(ConsumerMixin):
         :return: graph definition dictionary
         """
         template_file = os.path.join(os.path.dirname(__file__), "tasks",
-                                "funsize.yml")
+                                     "funsize.yml")
         template = open(template_file).read()
         now = stringDate(datetime.datetime.utcnow())
         now_ms = int(time.time() * 1000)

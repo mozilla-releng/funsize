@@ -1,6 +1,7 @@
 from unittest import TestCase
 from funsize.utils import properties_to_dict, encrypt, encrypt_env_var_message
 
+
 class TestPropertiesToDict(TestCase):
 
     def test_generic(self):

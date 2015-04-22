@@ -22,6 +22,7 @@ def encrypt_env_var_message(task_id, start_time, end_time, name, value):
         "value": value
     }
 
+
 def encrypt_env_var(task_id, start_time, end_time, name, value):
     message = str(json.dumps(encrypt_env_var_message(task_id, start_time,
                                                      end_time, name, value)))
