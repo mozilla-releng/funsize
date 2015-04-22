@@ -54,8 +54,7 @@ if __name__ == '__main__':
     scheduler = taskcluster.Scheduler(tc_opts)
 
     with Connection(hostname='pulse.mozilla.org', port=5671,
-                    userid=config["pulse"]["user"],
-                    password=pulse_password,
+                    userid=pulse_user, password=pulse_password,
                     virtual_host='/', ssl=True) as connection:
         FunsizeWorker(connection=connection, queue_name=queue_name,
                       exchange=config["pulse"]["exchange"],
