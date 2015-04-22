@@ -40,11 +40,11 @@ if __name__ == '__main__':
     queue_name = os.environ.get("PULSE_QUEUE_NAME", config["pulse"]["queue"])
     queue_name = 'queue/{user}/{queue_name}'.format(user=pulse_user,
                                                     queue_name=queue_name)
-    if "TASKCLUSTER_CLIENTID" in os.environ and \
+    if "TASKCLUSTER_CLIENT_ID" in os.environ and \
             "TASKCLUSTER_ACCESS_TOKEN" in os.environ:
         tc_opts = {
             "credentials": {
-                "clientId": os.environ["TASKCLUSTER_CLIENTID"],
+                "clientId": os.environ["TASKCLUSTER_CLIENT_ID"],
                 "accessToken": os.environ["TASKCLUSTER_ACCESS_TOKEN"]
             }
         }
