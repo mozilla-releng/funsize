@@ -1,1 +1,1 @@
-worker: python funsize/scheduler.py --config $PWD/config/defaults.yml
+worker: python funsize/scheduler.py --config $PWD/config/default.yml
