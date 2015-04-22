@@ -8,6 +8,7 @@ import pystache
 import re
 from taskcluster import slugId, stringDate, fromNow
 import yaml
+import json
 
 from funsize.utils import properties_to_dict, encrypt_env_var
 
@@ -116,20 +117,19 @@ class FunsizeWorker(ConsumerMixin):
         if not interesting_buildername(buildername):
             log.debug("Ignoring %s: not interested", buildername)
             return
-        result = payload["results"]
-        if result != 0:
-            log.debug("Ignoring %s with result %s", buildername, result)
+        job_result = payload["results"]
+        if job_result != 0:
+            log.debug("Ignoring %s with result %s", buildername, job_result)
             return
         properties = properties_to_dict(payload["build"]["properties"])
         if "locales" in properties:
             log.debug("L10N repack detected")
-            # TODO: blocked by bug 1146426
-            return
-            funsize_info = properties["funsize_info"]
+            funsize_info = json.loads(properties["funsize_info"])
+            locales = json.loads(properties["locales"])
             platform = funsize_info["platform"]
             branch = funsize_info["branch"]
             product = funsize_info["appName"]
-            for locale, result in properties["locales"]:
+            for locale, result in locales.iteritems():
                 if result.lower() == "success":
                     self.create_partial(product, branch, platform,
                                         locale)
