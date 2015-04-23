@@ -106,10 +106,6 @@ class FunsizeWorker(ConsumerMixin):
         """
         log.info('Listening...')
 
-    def on_connection_error(self, exc, interval):
-        log.exception("connection error")
-        super(FunsizeWorker, self).on_connection_error(exc, interval)
-
     def dispatch_message(self, body):
         """Dispatches incoming pulse messages.
         If the method detects L10N repacks, it creates multiple Taskcluster
