@@ -34,7 +34,7 @@ class FunsizeWorker(ConsumerMixin):
         :param queue_name: Full queue name, including queue/<user> prefix
         :type exchange: kombu.Exchange
         :type balrog_client: funsize.balrog.BalrogClient
-        :type scheduler: tascluster.Scheduler
+        :type scheduler: taskcluster.Scheduler
         """
         self.connection = connection
         # Using passive mode is important, otherwise pulse returns 403

@@ -93,7 +93,7 @@ tasks:
         description: |
           This task publishes signed updates to Balrog.
 
-      workerType: "ami-test"
+      workerType: "b2gtest"
       provisionerId: "aws-provisioner"
 
       tags:
