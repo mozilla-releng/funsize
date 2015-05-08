@@ -59,26 +59,14 @@ tasks:
         description: |
           This task signs MAR files and publishes signed bits.
 
-      workerType: "b2gtest"
-      provisionerId: "aws-provisioner"
+      workerType: "signing-worker-v1"
+      provisionerId: "signing-provisioneri-v1"
 
       tags:
         createdForUser: rail@mozilla.com
 
       payload:
-        image: 'rail/funsize-signer'
-        maxRunTime: 600
-        command:
-            - /runme.sh
-
-        env:
-          PARENT_TASK_ARTIFACTS_URL_PREFIX: 'https://queue.taskcluster.net/v1/task/{{update_generator_task_id}}/artifacts/public/env'
-
-        artifacts:
-          'public/env':
-            path: /home/worker/artifacts/
-            type: directory
-            expires: '{{#fromNow}}7 days{{/fromNow}}'
+        signingManifest: 'https://queue.taskcluster.net/v1/task/{{update_generator_task_id}}/artifacts/public/env/manifest.json'
 
   - taskId: '{{balrog_task_id}}'
     requires:
