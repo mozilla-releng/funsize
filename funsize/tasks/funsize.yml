@@ -60,7 +60,7 @@ tasks:
           This task signs MAR files and publishes signed bits.
 
       workerType: "signing-worker-v1"
-      provisionerId: "signing-provisioneri-v1"
+      provisionerId: "signing-provisioner-v1"
 
       tags:
         createdForUser: rail@mozilla.com
