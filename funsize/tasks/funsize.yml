@@ -61,6 +61,8 @@ tasks:
 
       workerType: "signing-worker-v1"
       provisionerId: "signing-provisioner-v1"
+      scopes:
+          - signing:dep
 
       tags:
         createdForUser: rail@mozilla.com
