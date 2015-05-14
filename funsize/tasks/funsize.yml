@@ -52,7 +52,7 @@ tasks:
       - '{{update_generator_task_id}}'
     task:
       created: '{{now}}'
-      deadline: '{{#fromNow}}2 hours{{/fromNow}}'
+      deadline: '{{#fromNow}}24 hours{{/fromNow}}'
       metadata:
         owner: release+funsize@mozilla.com
         source: https://github.com/rail/funsize-taskcluster
