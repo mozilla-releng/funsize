@@ -194,7 +194,7 @@ def main():
 
     manifest_file = os.path.join(work_env.workdir, "manifest.json")
     with open(manifest_file, "w") as fp:
-        json.dump(mar_data, fp, indent=2, sort_keys=True)
+        json.dump([mar_data], fp, indent=2, sort_keys=True)
     shutil.copy(dest_mar, args.artifacts_dir)
     shutil.copy(manifest_file, args.artifacts_dir)
     work_env.cleanup()
