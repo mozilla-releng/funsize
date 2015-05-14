@@ -9,6 +9,7 @@ scopes:
   - queue:*
   - docker-worker:*
   - scheduler:*
+  - signing:*
 
 tasks:
   - taskId: '{{update_generator_task_id}}'
