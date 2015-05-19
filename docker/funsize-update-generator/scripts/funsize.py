@@ -2,6 +2,7 @@
 
 import ConfigParser
 import argparse
+import functools
 import hashlib
 import json
 import logging
@@ -75,7 +76,7 @@ def generate_partial(work_env, from_dir, to_dir, dest_mar, channel_ids,
 def get_hash(path, hash_type="sha512"):
     h = hashlib.new(hash_type)
     with open(path, "rb") as f:
-        for chunk in f.read(4096):
+        for chunk in iter(functools.partial(f.read, 4096), ''):
             h.update(chunk)
     return h.hexdigest()
 
@@ -182,7 +183,7 @@ def main():
     mar_data["branch"] = args.branch or \
         mar_data["repo"].rstrip("/").split("/")[-1]
     mar_name = "%(appName)s-%(branch)s-%(version)s-%(platform)s-" \
-        "%(from_buildid)s-%(to_buildid)s.partial.mar" % mar_data
+        "%(locale)s-%(from_buildid)s-%(to_buildid)s.partial.mar" % mar_data
     mar_data["mar"] = mar_name
     dest_mar = os.path.join(work_env.workdir, mar_name)
     work_env.download_buildsystem_bits(repo=mar_data["repo"],
