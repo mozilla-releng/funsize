@@ -37,23 +37,22 @@ if __name__ == '__main__':
                            "variables should be set")
 
     manifest = json.load(open(args.manifest))
-    mar_url = "{}/{}".format(args.artifacts_url_prefix, manifest["mar"])
-
-    partialInfo = [
-        {
-            "url": mar_url,
-            "hash": manifest["hash"],
-            "from_buildid": manifest["from_buildid"],
-            "size": manifest["size"],
-        }
-    ]
-
     auth = (balrog_username, balrog_password)
     submitter = NightlySubmitterV4(args.api_root, auth, args.dummy)
-    retry(lambda: submitter.run(
-        platform=manifest["platform"], buildID=manifest["to_buildid"],
-        productName=manifest["appName"], branch=manifest["branch"],
-        appVersion=manifest["version"], locale=manifest["locale"],
-        hashFunction='sha512', extVersion=manifest["version"],
-        partialInfo=partialInfo)
-    )
+    for entry in manifest:
+        mar_url = "{}/{}".format(args.artifacts_url_prefix, entry["mar"])
+        partialInfo = [
+            {
+                "url": mar_url,
+                "hash": entry["hash"],
+                "from_buildid": entry["from_buildid"],
+                "size": entry["size"],
+            }
+        ]
+        retry(lambda: submitter.run(
+            platform=entry["platform"], buildID=entry["to_buildid"],
+            productName=entry["appName"], branch=entry["branch"],
+            appVersion=entry["version"], locale=entry["locale"],
+            hashFunction='sha512', extVersion=entry["version"],
+            partialInfo=partialInfo)
+        )
