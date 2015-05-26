@@ -155,8 +155,8 @@ def main():
         dest = os.path.join(work_env.workdir, f.split("/")[-1])
         unpack_dir = os.path.join(work_env.workdir, mar_type)
         download(f, dest)
-        complete_mars["%_size" % mar_type] = os.path.getsize(dest)
-        complete_mars["%_hash" % mar_type] = get_hash(dest)
+        complete_mars["%s_size" % mar_type] = os.path.getsize(dest)
+        complete_mars["%s_hash" % mar_type] = get_hash(dest)
         unpack(work_env, dest, unpack_dir)
 
     path = os.path.join(work_env.workdir, "to")
