@@ -150,10 +150,13 @@ def main():
 
     work_env = WorkEnv(workdir=args.workdir)
     work_env.setup()
-    for unpack_dir, f in (("from", args.from_mar), ("to", args.to_mar)):
+    complete_mars = {}
+    for mar_type, f in (("from", args.from_mar), ("to", args.to_mar)):
         dest = os.path.join(work_env.workdir, f.split("/")[-1])
-        unpack_dir = os.path.join(work_env.workdir, unpack_dir)
+        unpack_dir = os.path.join(work_env.workdir, mar_type)
         download(f, dest)
+        complete_mars["%_size" % mar_type] = os.path.getsize(dest)
+        complete_mars["%_hash" % mar_type] = get_hash(dest)
         unpack(work_env, dest, unpack_dir)
 
     path = os.path.join(work_env.workdir, "to")
@@ -180,6 +183,7 @@ def main():
         "platform": args.platform,
         "locale": args.locale,
     }
+    mar_data.update(complete_mars)
     mar_data["branch"] = args.branch or \
         mar_data["repo"].rstrip("/").split("/")[-1]
     mar_name = "%(appName)s-%(branch)s-%(version)s-%(platform)s-" \

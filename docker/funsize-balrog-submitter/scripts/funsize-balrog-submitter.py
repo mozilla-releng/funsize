@@ -49,10 +49,17 @@ if __name__ == '__main__':
                 "size": entry["size"],
             }
         ]
+        completeInfo = [
+            {
+                "url": entry["to_mar"],
+                "hash": entry["to_hash"],
+                "size": entry["to_size"],
+            }
+        ]
         retry(lambda: submitter.run(
             platform=entry["platform"], buildID=entry["to_buildid"],
             productName=entry["appName"], branch=entry["branch"],
             appVersion=entry["version"], locale=entry["locale"],
             hashFunction='sha512', extVersion=entry["version"],
-            partialInfo=partialInfo)
+            partialInfo=partialInfo, completeInfo=completeInfo)
         )
