@@ -64,8 +64,8 @@ tasks:
       provisionerId: "signing-provisioner-v1"
       scopes:
           - signing:cert:dep-signing
-          - signing:type:gpg
-          - signing:type:mar
+          - signing:format:gpg
+          - signing:format:mar
       tags:
         createdForUser: rail@mozilla.com
 
