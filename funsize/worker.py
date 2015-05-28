@@ -135,6 +135,14 @@ class FunsizeWorker(ConsumerMixin):
                                         locale)
                 else:
                     log.warn("Ignoring %s with result %s", locale, result)
+        elif "locale" in properties:
+            # Old-style buildbotcustom l10n repacks
+            # TODO: this branch can be removed when we switch to mozharness
+            #  based l10n repacks for TB and ESRs
+            log.debug("Single locale repack detected (%s)",
+                      properties["locale"])
+            self.create_partial(properties["appName"], properties["branch"],
+                                properties["platform"], properties["locale"])
         else:
             log.debug("en-US build detected")
             self.create_partial(properties["appName"], properties["branch"],
