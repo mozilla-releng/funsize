@@ -15,7 +15,7 @@ from funsize.utils import properties_to_dict, encrypt_env_var
 log = logging.getLogger(__name__)
 
 # TODO: move these to config
-BRANCHES = ['mozilla-central', 'mozilla-aurora']
+BRANCHES = ['mozilla-central', 'mozilla-aurora', 'comm-central', 'comm-aurora']
 PLATFORMS = ['linux', 'linux64', 'win32', 'win64', 'macosx64']
 BUILDERS = [
     r'WINNT \d+\.\d+ (x86-64 )?{branch} nightly',
@@ -54,6 +54,8 @@ class FunsizeWorker(ConsumerMixin):
         jobs = [
             # TODO: move to configs
             'build.{branch}-{platform}-nightly.*.finished',
+            # old style l10n repacks
+            'build.{branch}-{platform}-l10n-nightly.*.finished',
             # TODO: find a better way to specify these
             'build.{branch}-{platform}-l10n-nightly-1.*.finished',
             'build.{branch}-{platform}-l10n-nightly-2.*.finished',
