@@ -1,0 +1,2 @@
+recursive-include funsize/data *
+recursive-include funsize/tasks *

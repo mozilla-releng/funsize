@@ -11,7 +11,8 @@ from funsize import BalrogClient, FunsizeWorker
 
 log = logging.getLogger(__name__)
 
-if __name__ == '__main__':
+
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--config", required=True,
                         type=argparse.FileType(),
@@ -60,3 +61,7 @@ if __name__ == '__main__':
                       exchange=config["pulse"]["exchange"],
                       balrog_client=balrog_client,
                       scheduler=scheduler).run()
+
+
+if __name__ == '__main__':
+    main()
