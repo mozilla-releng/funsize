@@ -1,2 +1,4 @@
 .tox/
 .coverage
+dist
+funsize.egg-info
