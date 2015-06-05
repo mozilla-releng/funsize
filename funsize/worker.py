@@ -29,7 +29,7 @@ BUILDERS = [
 class FunsizeWorker(ConsumerMixin):
 
     def __init__(self, connection, queue_name, exchange, balrog_client,
-                 scheduler):
+                 scheduler, s3_info):
         """Funsize consumer worker
         :type connection: kombu.Connection
         :param queue_name: Full queue name, including queue/<user> prefix
@@ -43,6 +43,7 @@ class FunsizeWorker(ConsumerMixin):
         self.queue_name = queue_name
         self.balrog_client = balrog_client
         self.scheduler = scheduler
+        self.s3_info = s3_info
 
     @property
     def routing_keys(self):
@@ -213,12 +214,20 @@ class FunsizeWorker(ConsumerMixin):
             "locale": locale,
             "from_MAR": from_mar,
             "to_MAR": to_mar,
+            "S3_BUCKET": self.s3_info["s3_bucket"],
             "BALROG_USERNAME_ENC_MESSAGE": encrypt_env_var(
                 balrog_task_id, now_ms, encryption_deadline, 'BALROG_USERNAME',
                 self.balrog_client.auth[0]),
             "BALROG_PASSWORD_ENC_MESSAGE": encrypt_env_var(
                 balrog_task_id, now_ms, encryption_deadline, 'BALROG_PASSWORD',
-                self.balrog_client.auth[1])
+                self.balrog_client.auth[1]),
+            "AWS_ACCESS_KEY_ID": encrypt_env_var(
+                balrog_task_id, now_ms, encryption_deadline,
+                'AWS_ACCESS_KEY_ID', self.s3_info["aws_access_key_id"]),
+            "AWS_SECRET_ACCESS_KEY": encrypt_env_var(
+                balrog_task_id, now_ms, encryption_deadline,
+                'AWS_SECRET_ACCESS_KEY', self.s3_info["aws_secret_access_key"]
+            ),
         }
         rendered = pystache.render(template, template_vars)
         return yaml.safe_load(rendered)

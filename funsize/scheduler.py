@@ -40,6 +40,16 @@ def main():
     queue_name = os.environ.get("PULSE_QUEUE_NAME", config["pulse"]["queue"])
     queue_name = 'queue/{user}/{queue_name}'.format(user=pulse_user,
                                                     queue_name=queue_name)
+    s3_info = {
+        "s3_bucket": os.environ.get("S3_BUCKET", config["s3"]["bucket"]),
+        "aws_access_key_id": os.environ.get("AWS_ACCESS_KEY_ID",
+                                            config["s3"]["aws_access_key_id"]),
+        "aws_secret_access_key": os.environ.get(
+            "AWS_SECRET_ACCESS_KEY", config["s3"]["aws_secret_access_key"])
+    }
+
+    os.environ.get("PULSE_QUEUE_NAME", config["pulse"]["queue"])
+
     if "TASKCLUSTER_CLIENT_ID" in os.environ and \
             "TASKCLUSTER_ACCESS_TOKEN" in os.environ:
         tc_opts = {
@@ -60,7 +70,7 @@ def main():
         FunsizeWorker(connection=connection, queue_name=queue_name,
                       exchange=config["pulse"]["exchange"],
                       balrog_client=balrog_client,
-                      scheduler=scheduler).run()
+                      scheduler=scheduler, s3_info=s3_info).run()
 
 
 if __name__ == '__main__':
