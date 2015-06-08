@@ -10,6 +10,7 @@ scopes:
   - docker-worker:*
   - scheduler:*
   - signing:*
+  - docker-worker:feature:balrogVPNProxy
 
 tasks:
   - taskId: '{{update_generator_task_id}}'
@@ -24,7 +25,7 @@ tasks:
           This task generates MAR files and publishes unsigned bits.
 
       workerType: "b2gtest"
-      provisionerId: "aws-provisioner"
+      provisionerId: "aws-provisioner-v1"
 
       tags:
         createdForUser: rail@mozilla.com
@@ -85,9 +86,10 @@ tasks:
         description: |
           This task publishes signed updates to Balrog.
 
-      workerType: "b2gtest"
-      provisionerId: "aws-provisioner"
-
+      workerType: "balrog"
+      provisionerId: "aws-provisioner-v1"
+      scopes:
+        - docker-worker:feature:balrogVPNProxy
       tags:
         createdForUser: rail@mozilla.com
 
@@ -103,3 +105,5 @@ tasks:
         encryptedEnv:
           - '{{{BALROG_USERNAME_ENC_MESSAGE}}}'
           - '{{{BALROG_PASSWORD_ENC_MESSAGE}}}'
+        features:
+          balrogVPNProxy: true
