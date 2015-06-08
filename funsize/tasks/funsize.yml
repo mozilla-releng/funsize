@@ -13,10 +13,10 @@ scopes:
   - docker-worker:feature:balrogVPNProxy
 
 tasks:
-  - taskId: '{{update_generator_task_id}}'
+  - taskId: '{{ stable_slugId("update_generator_task") }}'
     task:
-      created: '{{now}}'
-      deadline: '{{#fromNow}}24 hours{{/fromNow}}'
+      created: '{{ now }}'
+      deadline: '{{ fromNow("24 hours") }}'
       metadata:
         owner: release+funsize@mozilla.com
         source: https://github.com/rail/funsize-taskcluster
@@ -37,23 +37,23 @@ tasks:
             - /runme.sh
 
         env:
-          FROM_MAR: '{{{from_MAR}}}'
-          TO_MAR: '{{{to_MAR}}}'
-          PLATFORM: '{{platform}}'
-          LOCALE: '{{locale}}'
+          FROM_MAR: '{{ from_MAR }}'
+          TO_MAR: '{{ to_MAR }}'
+          PLATFORM: '{{ platform }}'
+          LOCALE: '{{ locale }}'
 
         artifacts:
           'public/env':
             path: /home/worker/artifacts/
             type: directory
-            expires: '{{#fromNow}}7 days{{/fromNow}}'
+            expires: '{{ fromNow("7 days") }}'
 
-  - taskId: '{{signing_task_id}}'
+  - taskId: '{{ stable_slugId("signing_task") }}'
     requires:
-      - '{{update_generator_task_id}}'
+      - '{{ stable_slugId("update_generator_task") }}'
     task:
-      created: '{{now}}'
-      deadline: '{{#fromNow}}24 hours{{/fromNow}}'
+      created: '{{ now }}'
+      deadline: '{{ fromNow("24 hours") }}'
       metadata:
         owner: release+funsize@mozilla.com
         source: https://github.com/rail/funsize-taskcluster
@@ -71,14 +71,14 @@ tasks:
         createdForUser: rail@mozilla.com
 
       payload:
-        signingManifest: 'https://queue.taskcluster.net/v1/task/{{update_generator_task_id}}/artifacts/public/env/manifest.json'
+        signingManifest: 'https://queue.taskcluster.net/v1/task/{{ stable_slugId("update_generator_task") }}/artifacts/public/env/manifest.json'
 
-  - taskId: '{{balrog_task_id}}'
+  - taskId: '{{ stable_slugId("balrog_task") }}'
     requires:
-      - '{{signing_task_id}}'
+      - '{{ stable_slugId("signing_task") }}'
     task:
-      created: '{{now}}'
-      deadline: '{{#fromNow}}24 hours{{/fromNow}}'
+      created: '{{ now }}'
+      deadline: '{{ fromNow("24 hours") }}'
       metadata:
         owner: release+funsize@mozilla.com
         source: https://github.com/rail/funsize-taskcluster
@@ -100,10 +100,14 @@ tasks:
             - /runme.sh
 
         env:
-          PARENT_TASK_ARTIFACTS_URL_PREFIX: 'https://queue.taskcluster.net/v1/task/{{signing_task_id}}/artifacts/public/env'
+          PARENT_TASK_ARTIFACTS_URL_PREFIX: 'https://queue.taskcluster.net/v1/task/{{ stable_slugId("signing_task") }}/artifacts/public/env'
           BALROG_API_ROOT: 'https://aus4-admin-dev.allizom.org/api'
         encryptedEnv:
-          - '{{{BALROG_USERNAME_ENC_MESSAGE}}}'
-          - '{{{BALROG_PASSWORD_ENC_MESSAGE}}}'
+          - {{ encrypt_env_var(stable_slugId("balrog_task"), now_ms,
+                               now_ms + 24 * 3600 * 1000, 'BALROG_USERNAME',
+                               balrog_username) }}
+          - {{ encrypt_env_var(stable_slugId("balrog_task"), now_ms,
+                               now_ms + 24 * 3600 * 1000, 'BALROG_PASSWORD',
+                               balrog_password) }}
         features:
           balrogVPNProxy: true
