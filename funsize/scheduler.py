@@ -51,7 +51,8 @@ def main():
     else:
         tc_opts = config["taskcluster"]
 
-    balrog_client = BalrogClient(api_root=api_root, auth=auth)
+    cert = config["balrog"].get("cert")
+    balrog_client = BalrogClient(api_root=api_root, auth=auth, cert=cert)
     scheduler = taskcluster.Scheduler(tc_opts)
 
     with Connection(hostname='pulse.mozilla.org', port=5671,
