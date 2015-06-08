@@ -15,7 +15,7 @@ class BalrogClient(object):
         self.api_root = api_root
         self.auth = auth
         if cert:
-            self.verify = os.path.join(os.path.dirname(__file__), 'data', cert)
+            self.verify = cert
         else:
             self.verify = True
 

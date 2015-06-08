@@ -3,6 +3,8 @@ balrog:
     username: null
     password: null
     api_root: https://aus4-admin-dev.allizom.org/api
+    # usually needed if using https://aus4-admin.mozilla.org/api as the api_root
+    # cert: funsize/data/mozilla-root.crt
 
 pulse:
     user: null
