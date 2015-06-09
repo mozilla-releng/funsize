@@ -33,7 +33,7 @@ class FunsizeWorker(ConsumerMixin):
         """Funsize consumer worker
         :type connection: kombu.Connection
         :param queue_name: Full queue name, including queue/<user> prefix
-        :type exchange: kombu.Exchange
+        :type exchange: basestring
         :type balrog_client: funsize.balrog.BalrogClient
         :type scheduler: taskcluster.Scheduler
         """
@@ -193,7 +193,7 @@ class FunsizeWorker(ConsumerMixin):
         :param platform: buildbot platform (linux, macosx64)
         :param locale: en-US, de, ka, etc.
         :param from_mar: "from" MAR URL
-        :param to_mar: "to" MAR URK
+        :param to_mar: "to" MAR URL
         :return: graph definition dictionary
         """
         template_file = os.path.join(os.path.dirname(__file__), "tasks",
