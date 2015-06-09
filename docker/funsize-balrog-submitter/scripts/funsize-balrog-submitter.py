@@ -13,14 +13,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__),
                 "/home/worker/tools/lib/python"))
 
 from balrog.submitter.cli import NightlySubmitterV4
-from util.retry import retry
+from util.retry import retry, retriable
 import requests
 
-
-def copy_to_s3(s3_bucket, aws_access_key_id, aws_secret_access_key,
+@retriable(attempts=5, sleeptime=10, max_sleeptime=60)
+def copy_to_s3(bucket_name, aws_access_key_id, aws_secret_access_key,
                mar_url, mar_dest):
     conn = S3Connection(aws_access_key_id, aws_secret_access_key)
-    bucket = conn.get_bucket(s3_bucket)
+    bucket = conn.get_bucket(bucket_name)
     key = bucket.get_key(mar_dest)
     r = requests.get(mar_url)
     key.set_contents_from_string(r.content)
@@ -28,7 +28,7 @@ def copy_to_s3(s3_bucket, aws_access_key_id, aws_secret_access_key,
     return key.generate_url(expires_in=0, query_auth=False)
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--artifacts-url-prefix", required=True,
                         help="URL prefix for MAR")
@@ -75,7 +75,7 @@ if __name__ == '__main__':
             s3_bucket, aws_access_key_id, aws_secret_access_key,
             complete_mar_url, complete_mar_dest)
 
-        partialInfo = [
+        partial_info = [
             {
                 "url": final_partial_mar_url,
                 "hash": entry["hash"],
@@ -83,7 +83,7 @@ if __name__ == '__main__':
                 "size": entry["size"],
             }
         ]
-        completeInfo = [
+        complete_info = [
             {
                 "url": final_complete_mar_url,
                 "hash": entry["to_hash"],
@@ -95,5 +95,9 @@ if __name__ == '__main__':
             productName=entry["appName"], branch=entry["branch"],
             appVersion=entry["version"], locale=entry["locale"],
             hashFunction='sha512', extVersion=entry["version"],
-            partialInfo=partialInfo, completeInfo=completeInfo)
+            partialInfo=partial_info, completeInfo=complete_info)
         )
+
+
+if __name__ == '__main__':
+    main()
