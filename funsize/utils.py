@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import pgpy
+from taskcluster import slugId
 
 
 def properties_to_dict(props):
@@ -42,3 +43,14 @@ def encrypt(message):
     msg = pgpy.PGPMessage.new(message)
     encrypted = key.encrypt(msg)
     return base64.b64encode(encrypted.__bytes__())
+
+
+class StableSlugId(object):
+
+    def __init__(self):
+        self._cache = {}
+
+    def slugId(self, name):
+        if name not in self._cache:
+            self._cache[name] = slugId()
+        return self._cache[name]

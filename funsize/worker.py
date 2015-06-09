@@ -4,13 +4,13 @@ import time
 from kombu import Exchange, Queue
 from kombu.mixins import ConsumerMixin
 import os
-import pystache
 import re
 from taskcluster import slugId, stringDate, fromNow
 import yaml
 import json
+from jinja2 import Template
 
-from funsize.utils import properties_to_dict, encrypt_env_var
+from funsize.utils import properties_to_dict, encrypt_env_var, StableSlugId
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class FunsizeWorker(ConsumerMixin):
         """Funsize consumer worker
         :type connection: kombu.Connection
         :param queue_name: Full queue name, including queue/<user> prefix
-        :type exchange: kombu.Exchange
+        :type exchange: basestring
         :type balrog_client: funsize.balrog.BalrogClient
         :type scheduler: taskcluster.Scheduler
         """
@@ -193,34 +193,30 @@ class FunsizeWorker(ConsumerMixin):
         :param platform: buildbot platform (linux, macosx64)
         :param locale: en-US, de, ka, etc.
         :param from_mar: "from" MAR URL
-        :param to_mar: "to" MAR URK
+        :param to_mar: "to" MAR URL
         :return: graph definition dictionary
         """
         template_file = os.path.join(os.path.dirname(__file__), "tasks",
                                      "funsize.yml")
-        template = open(template_file).read()
-        now = stringDate(datetime.datetime.utcnow())
-        now_ms = int(time.time() * 1000)
-        encryption_deadline = now_ms + 24 * 3600 * 1000  # 24 hours
-        balrog_task_id = slugId()
         template_vars = {
-            "update_generator_task_id": slugId(),
-            "signing_task_id": slugId(),
-            "balrog_task_id": balrog_task_id,
-            "now": now,
-            "fromNow": fromNow,  # dynamic function call
+            # Stable slugId
+            "stable_slugId": StableSlugId().slugId,
+            # Now in ISO format
+            "now": stringDate(datetime.datetime.utcnow()),
+            # Now in ms
+            "now_ms": time.time() * 1000,
+            "fromNow": fromNow,
             "platform": platform,
             "locale": locale,
             "from_MAR": from_mar,
             "to_MAR": to_mar,
-            "BALROG_USERNAME_ENC_MESSAGE": encrypt_env_var(
-                balrog_task_id, now_ms, encryption_deadline, 'BALROG_USERNAME',
-                self.balrog_client.auth[0]),
-            "BALROG_PASSWORD_ENC_MESSAGE": encrypt_env_var(
-                balrog_task_id, now_ms, encryption_deadline, 'BALROG_PASSWORD',
-                self.balrog_client.auth[1])
+            "balrog_username": self.balrog_client.auth[0],
+            "balrog_password": self.balrog_client.auth[1],
+            "encrypt_env_var": encrypt_env_var,
         }
-        rendered = pystache.render(template, template_vars)
+        with open(template_file) as f:
+            template = Template(f.read())
+        rendered = template.render(**template_vars)
         return yaml.safe_load(rendered)
 
 

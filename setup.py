@@ -26,7 +26,7 @@ setup(
         "PGPy",
         "pycparser",
         "PyHawk-with-a-single-extra-commit",
-        "pystache",
+        "Jinja2",
         "PyYAML",
         # Because taskcluster hard pins this version...
         "requests==2.4.3",
