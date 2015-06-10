@@ -5,13 +5,16 @@ import logging
 import argparse
 import json
 import sys
-from boto.s3.connection import S3Connection
-
 sys.path.insert(0, os.path.join(os.path.dirname(__file__),
                 "/home/worker/tools/lib/python/vendor/requests-0.10.8"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__),
+                "/home/worker/tools/lib/python/vendor/certifi-2015.04.28"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__),
+                "/home/worker/tools/lib/python/vendor/boto-2.38.0"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__),
                 "/home/worker/tools/lib/python"))
 
+from boto.s3.connection import S3Connection
 from balrog.submitter.cli import NightlySubmitterV4
 from util.retry import retry, retriable
 import requests
