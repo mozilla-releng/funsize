@@ -16,10 +16,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__),
 
 from boto.s3.connection import S3Connection
 from balrog.submitter.cli import NightlySubmitterV4
-from util.retry import retry, retriable
+from util.retry import retry
 import requests
 
-@retriable(attempts=5, sleeptime=10, max_sleeptime=60)
+
 def copy_to_s3(bucket_name, aws_access_key_id, aws_secret_access_key,
                mar_url, mar_dest):
     conn = S3Connection(aws_access_key_id, aws_secret_access_key)
