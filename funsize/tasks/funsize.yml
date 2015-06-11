@@ -100,7 +100,7 @@ tasks:
         description: |
           This task publishes signed updates to Balrog.
 
-      workerType: "balrog"
+      workerType: "funsize-balrog"
       provisionerId: "aws-provisioner-v1"
       scopes:
         - docker-worker:feature:balrogVPNProxy
