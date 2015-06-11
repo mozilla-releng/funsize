@@ -136,7 +136,7 @@ class FunsizeWorker(ConsumerMixin):
             for locale, result in locales.iteritems():
                 if result.lower() == "success":
                     self.create_partial(product, branch, platform,
-                                        locale)
+                                        locale, properties["revision"])
                 else:
                     log.warn("Ignoring %s with result %s", locale, result)
         elif "locale" in properties:
@@ -146,13 +146,15 @@ class FunsizeWorker(ConsumerMixin):
             log.debug("Single locale repack detected (%s)",
                       properties["locale"])
             self.create_partial(properties["appName"], properties["branch"],
-                                properties["platform"], properties["locale"])
+                                properties["platform"], properties["locale"],
+                                properties["fx_revision"])
         else:
             log.debug("en-US build detected")
             self.create_partial(properties["appName"], properties["branch"],
-                                properties["platform"], 'en-US')
+                                properties["platform"], 'en-US',
+                                properties["revision"])
 
-    def create_partial(self, product, branch, platform, locale):
+    def create_partial(self, product, branch, platform, locale, revision):
         """Calculates "from" and "to" MAR URLs and calls  create_task_graph().
         Currently "from" MAR is 2 releases behind to avoid duplication of
         existing CI partials.
@@ -178,17 +180,18 @@ class FunsizeWorker(ConsumerMixin):
         mar_to = build_to["completes"][0]["fileUrl"]
         log.info("New Funsize task for %s %s, from %s to %s", platform, locale,
                  mar_from, mar_to)
-        self.submit_task_graph(platform, locale, mar_from, mar_to)
+        self.submit_task_graph(platform, locale, mar_from, mar_to, revision)
 
-    def submit_task_graph(self, platform, locale, from_mar, to_mar):
+    def submit_task_graph(self, platform, locale, from_mar, to_mar, revision):
         graph_id = slugId()
         log.info("Submitting a new graph %s", graph_id)
-        task_graph = self.from_template(platform, locale, from_mar, to_mar)
+        task_graph = self.from_template(platform, locale, from_mar, to_mar,
+                                        revision)
         res = self.scheduler.createTaskGraph(graph_id, task_graph)
         log.info("Result was: %s", res)
         return graph_id
 
-    def from_template(self, platform, locale, from_mar, to_mar):
+    def from_template(self, platform, locale, from_mar, to_mar, revision):
         """Reads and populates graph template.
 
         :param platform: buildbot platform (linux, macosx64)
@@ -217,6 +220,7 @@ class FunsizeWorker(ConsumerMixin):
             "balrog_username": self.balrog_client.auth[0],
             "balrog_password": self.balrog_client.auth[1],
             "encrypt_env_var": encrypt_env_var,
+            "revision": revision,
         }
         with open(template_file) as f:
             template = Template(f.read())
