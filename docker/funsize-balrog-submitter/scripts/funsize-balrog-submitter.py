@@ -46,6 +46,8 @@ def main():
                         default=logging.INFO)
     args = parser.parse_args()
     logging.basicConfig(level=args.loglevel, format="%(message)s")
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("boto").setLevel(logging.WARNING)
 
     balrog_username = os.environ.get("BALROG_USERNAME")
     balrog_password = os.environ.get("BALROG_PASSWORD")
