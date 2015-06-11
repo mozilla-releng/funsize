@@ -10,7 +10,7 @@ import yaml
 import json
 from jinja2 import Template
 
-from funsize.utils import properties_to_dict, encrypt_env_var, StableSlugId
+from funsize.utils import properties_to_dict, encrypt_env_var, stable_slugId
 
 log = logging.getLogger(__name__)
 
@@ -201,7 +201,7 @@ class FunsizeWorker(ConsumerMixin):
                                      "funsize.yml")
         template_vars = {
             # Stable slugId
-            "stable_slugId": StableSlugId().slugId,
+            "stable_slugId": stable_slugId(),
             # Now in ISO format
             "now": stringDate(datetime.datetime.utcnow()),
             # Now in ms
