@@ -187,6 +187,7 @@ class FunsizeWorker(ConsumerMixin):
         log.info("Submitting a new graph %s", graph_id)
         task_graph = self.from_template(platform, locale, from_mar, to_mar,
                                         revision)
+        log.debug("Graph definition: %s", task_graph)
         res = self.scheduler.createTaskGraph(graph_id, task_graph)
         log.info("Result was: %s", res)
         return graph_id
