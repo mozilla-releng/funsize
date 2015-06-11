@@ -135,8 +135,9 @@ class FunsizeWorker(ConsumerMixin):
             product = funsize_info["appName"]
             for locale, result in locales.iteritems():
                 if result.lower() == "success":
-                    self.create_partial(product, branch, platform,
-                                        locale, properties["revision"])
+                    self.create_partial(
+                        product=product, branch=branch, platform=platform,
+                        locale=locale, revision=properties["revision"])
                 else:
                     log.warn("Ignoring %s with result %s", locale, result)
         elif "locale" in properties:
@@ -145,14 +146,16 @@ class FunsizeWorker(ConsumerMixin):
             #  based l10n repacks for TB and ESRs
             log.debug("Single locale repack detected (%s)",
                       properties["locale"])
-            self.create_partial(properties["appName"], properties["branch"],
-                                properties["platform"], properties["locale"],
-                                properties["fx_revision"])
+            self.create_partial(
+                product=properties["appName"], branch=properties["branch"],
+                platform=properties["platform"], locale=properties["locale"],
+                revision=properties["fx_revision"])
         else:
             log.debug("en-US build detected")
-            self.create_partial(properties["appName"], properties["branch"],
-                                properties["platform"], 'en-US',
-                                properties["revision"])
+            self.create_partial(
+                product=properties["appName"], branch=properties["branch"],
+                platform=properties["platform"], locale='en-US',
+                revision=properties["revision"])
 
     def create_partial(self, product, branch, platform, locale, revision):
         """Calculates "from" and "to" MAR URLs and calls  create_task_graph().
@@ -176,19 +179,21 @@ class FunsizeWorker(ConsumerMixin):
         log.debug("Build from: %s", build_from)
         build_to = self.balrog_client.get_build(release_to, platform, locale)
         log.debug("Build to: %s", build_to)
-        mar_from = build_from["completes"][0]["fileUrl"]
-        mar_to = build_to["completes"][0]["fileUrl"]
+        from_mar = build_from["completes"][0]["fileUrl"]
+        to_mar = build_to["completes"][0]["fileUrl"]
         log.info("New Funsize task for %s %s, from %s to %s", platform, locale,
-                 mar_from, mar_to)
-        self.submit_task_graph(platform, locale, mar_from, mar_to, revision,
-                               branch)
+                 from_mar, to_mar)
+        self.submit_task_graph(
+            platform=platform, locale=locale, from_mar=from_mar, to_mar=to_mar,
+            revision=revision, branch=branch)
 
     def submit_task_graph(self, platform, locale, from_mar, to_mar, revision,
                           branch):
         graph_id = slugId()
         log.info("Submitting a new graph %s", graph_id)
-        task_graph = self.from_template(platform, locale, from_mar, to_mar,
-                                        revision, branch)
+        task_graph = self.from_template(
+            platform=platform, locale=locale, from_mar=from_mar, to_mar=to_mar,
+            revision=revision, branch=branch)
         log.debug("Graph definition: %s", task_graph)
         res = self.scheduler.createTaskGraph(graph_id, task_graph)
         log.info("Result was: %s", res)
