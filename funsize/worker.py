@@ -180,19 +180,22 @@ class FunsizeWorker(ConsumerMixin):
         mar_to = build_to["completes"][0]["fileUrl"]
         log.info("New Funsize task for %s %s, from %s to %s", platform, locale,
                  mar_from, mar_to)
-        self.submit_task_graph(platform, locale, mar_from, mar_to, revision)
+        self.submit_task_graph(platform, locale, mar_from, mar_to, revision,
+                               branch)
 
-    def submit_task_graph(self, platform, locale, from_mar, to_mar, revision):
+    def submit_task_graph(self, platform, locale, from_mar, to_mar, revision,
+                          branch):
         graph_id = slugId()
         log.info("Submitting a new graph %s", graph_id)
         task_graph = self.from_template(platform, locale, from_mar, to_mar,
-                                        revision)
+                                        revision, branch)
         log.debug("Graph definition: %s", task_graph)
         res = self.scheduler.createTaskGraph(graph_id, task_graph)
         log.info("Result was: %s", res)
         return graph_id
 
-    def from_template(self, platform, locale, from_mar, to_mar, revision):
+    def from_template(self, platform, locale, from_mar, to_mar, revision,
+                      branch):
         """Reads and populates graph template.
 
         :param platform: buildbot platform (linux, macosx64)
@@ -222,6 +225,7 @@ class FunsizeWorker(ConsumerMixin):
             "balrog_password": self.balrog_client.auth[1],
             "encrypt_env_var": encrypt_env_var,
             "revision": revision,
+            "branch": branch,
         }
         with open(template_file) as f:
             template = Template(f.read())
