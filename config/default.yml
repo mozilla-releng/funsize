@@ -16,3 +16,7 @@ taskcluster:
     credentials:
       clientId: null
       accessToken: null
+s3:
+    bucket: null
+    aws_access_key_id: null
+    aws_secret_access_key: null
