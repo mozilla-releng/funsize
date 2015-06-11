@@ -45,12 +45,16 @@ def encrypt(message):
     return base64.b64encode(encrypted.__bytes__())
 
 
-class StableSlugId(object):
+def stable_slugId():
+    """Returns a closure which can be used to generate stable slugIds.
+    Stable slugIds can be used in a graph to specify task IDs in multiple
+    places without regenerating them, e.g. taskId, requires, etc.
+    """
+    _cache = {}
 
-    def __init__(self):
-        self._cache = {}
+    def closure(name):
+        if name not in _cache:
+            _cache[name] = slugId()
+        return _cache[name]
 
-    def slugId(self, name):
-        if name not in self._cache:
-            self._cache[name] = slugId()
-        return self._cache[name]
+    return closure
