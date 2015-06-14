@@ -101,7 +101,7 @@ tasks:
 
         env:
           PARENT_TASK_ARTIFACTS_URL_PREFIX: 'https://queue.taskcluster.net/v1/task/{{ stable_slugId("signing_task") }}/artifacts/public/env'
-          BALROG_API_ROOT: 'https://aus4-admin-dev.allizom.org/api'
+          BALROG_API_ROOT: {{ balrog_api_root }}
           S3_BUCKET: {{ s3_bucket }}
         encryptedEnv:
           - {{ encrypt_env_var(stable_slugId("balrog_task"), now_ms,

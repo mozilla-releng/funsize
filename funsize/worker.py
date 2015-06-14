@@ -214,6 +214,7 @@ class FunsizeWorker(ConsumerMixin):
             "s3_bucket": self.s3_info["s3_bucket"],
             "aws_access_key_id": self.s3_info["aws_access_key_id"],
             "aws_secret_access_key": self.s3_info["aws_secret_access_key"],
+            "balrog_api_root": self.balrog_client.api_root,
             "balrog_username": self.balrog_client.auth[0],
             "balrog_password": self.balrog_client.auth[1],
             "encrypt_env_var": encrypt_env_var,
