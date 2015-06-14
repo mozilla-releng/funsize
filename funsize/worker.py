@@ -15,14 +15,14 @@ from funsize.utils import properties_to_dict, encrypt_env_var, stable_slugId
 log = logging.getLogger(__name__)
 
 # TODO: move these to config
-BRANCHES = ['mozilla-central', 'mozilla-aurora', 'comm-central', 'comm-aurora']
+BRANCHES = ['mozilla-central', 'mozilla-aurora']
 PLATFORMS = ['linux', 'linux64', 'win32', 'win64', 'macosx64']
 BUILDERS = [
-    r'(TB )?WINNT \d+\.\d+ (x86-64 )?{branch} nightly',
-    r'(TB )?Linux (x86-64 )?{branch} nightly',
-    r'(TB )?OS X \d+\.\d+ {branch} nightly',
-    r'(Thunderbird|Firefox) {branch} (linux|linux64|win32|win64|macosx64) l10n nightly-\d+',
-    r'(Thunderbird|Firefox) {branch} (linux|linux64|win32|win64|macosx64) l10n nightly',
+    r'^WINNT \d+\.\d+ (x86-64 )?{branch} nightly',
+    r'^Linux (x86-64 )?{branch} nightly',
+    r'^OS X \d+\.\d+ {branch} nightly',
+    r'^Firefox {branch} (linux|linux64|win32|win64|macosx64) l10n nightly-\d+',
+    r'^Firefox {branch} (linux|linux64|win32|win64|macosx64) l10n nightly',
 ]
 
 

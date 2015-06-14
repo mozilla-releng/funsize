@@ -85,7 +85,7 @@ tasks:
         machine:
           platform: {{ platform }}
         build:
-          platform: {{ platform }}
+          platform: {{ platform }} # TODO: https://github.com/mozilla/treeherder/blob/master/ui/js/values.js
         treeherderEnv:
           - staging
         treeherder:
