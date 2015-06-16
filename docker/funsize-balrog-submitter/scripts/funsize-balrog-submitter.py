@@ -16,10 +16,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__),
 
 from boto.s3.connection import S3Connection
 from balrog.submitter.cli import NightlySubmitterV4
-from util.retry import retry, retriable
+from util.retry import retry
 import requests
 
-@retriable(attempts=5, sleeptime=10, max_sleeptime=60)
+
 def copy_to_s3(bucket_name, aws_access_key_id, aws_secret_access_key,
                mar_url, mar_dest):
     conn = S3Connection(aws_access_key_id, aws_secret_access_key)
@@ -46,6 +46,8 @@ def main():
                         default=logging.INFO)
     args = parser.parse_args()
     logging.basicConfig(level=args.loglevel, format="%(message)s")
+    logging.getLogger("requests").setLevel(logging.WARNING)
+    logging.getLogger("boto").setLevel(logging.WARNING)
 
     balrog_username = os.environ.get("BALROG_USERNAME")
     balrog_password = os.environ.get("BALROG_PASSWORD")

@@ -15,14 +15,14 @@ from funsize.utils import properties_to_dict, encrypt_env_var, stable_slugId
 log = logging.getLogger(__name__)
 
 # TODO: move these to config
-BRANCHES = ['mozilla-central', 'mozilla-aurora', 'comm-central', 'comm-aurora']
+BRANCHES = ['mozilla-central', 'mozilla-aurora']
 PLATFORMS = ['linux', 'linux64', 'win32', 'win64', 'macosx64']
 BUILDERS = [
-    r'(TB )?WINNT \d+\.\d+ (x86-64 )?{branch} nightly',
-    r'(TB )?Linux (x86-64 )?{branch} nightly',
-    r'(TB )?OS X \d+\.\d+ {branch} nightly',
-    r'(Thunderbird|Firefox) {branch} (linux|linux64|win32|win64|macosx64) l10n nightly-\d+',
-    r'(Thunderbird|Firefox) {branch} (linux|linux64|win32|win64|macosx64) l10n nightly',
+    r'^WINNT \d+\.\d+ (x86-64 )?{branch} nightly',
+    r'^Linux (x86-64 )?{branch} nightly',
+    r'^OS X \d+\.\d+ {branch} nightly',
+    r'^Firefox {branch} (linux|linux64|win32|win64|macosx64) l10n nightly-\d+',
+    r'^Firefox {branch} (linux|linux64|win32|win64|macosx64) l10n nightly',
 ]
 
 
@@ -135,8 +135,9 @@ class FunsizeWorker(ConsumerMixin):
             product = funsize_info["appName"]
             for locale, result in locales.iteritems():
                 if result.lower() == "success":
-                    self.create_partial(product, branch, platform,
-                                        locale)
+                    self.create_partial(
+                        product=product, branch=branch, platform=platform,
+                        locale=locale, revision=properties["revision"])
                 else:
                     log.warn("Ignoring %s with result %s", locale, result)
         elif "locale" in properties:
@@ -145,14 +146,18 @@ class FunsizeWorker(ConsumerMixin):
             #  based l10n repacks for TB and ESRs
             log.debug("Single locale repack detected (%s)",
                       properties["locale"])
-            self.create_partial(properties["appName"], properties["branch"],
-                                properties["platform"], properties["locale"])
+            self.create_partial(
+                product=properties["appName"], branch=properties["branch"],
+                platform=properties["platform"], locale=properties["locale"],
+                revision=properties["fx_revision"])
         else:
             log.debug("en-US build detected")
-            self.create_partial(properties["appName"], properties["branch"],
-                                properties["platform"], 'en-US')
+            self.create_partial(
+                product=properties["appName"], branch=properties["branch"],
+                platform=properties["platform"], locale='en-US',
+                revision=properties["revision"])
 
-    def create_partial(self, product, branch, platform, locale):
+    def create_partial(self, product, branch, platform, locale, revision):
         """Calculates "from" and "to" MAR URLs and calls  create_task_graph().
         Currently "from" MAR is 2 releases behind to avoid duplication of
         existing CI partials.
@@ -174,21 +179,28 @@ class FunsizeWorker(ConsumerMixin):
         log.debug("Build from: %s", build_from)
         build_to = self.balrog_client.get_build(release_to, platform, locale)
         log.debug("Build to: %s", build_to)
-        mar_from = build_from["completes"][0]["fileUrl"]
-        mar_to = build_to["completes"][0]["fileUrl"]
+        from_mar = build_from["completes"][0]["fileUrl"]
+        to_mar = build_to["completes"][0]["fileUrl"]
         log.info("New Funsize task for %s %s, from %s to %s", platform, locale,
-                 mar_from, mar_to)
-        self.submit_task_graph(platform, locale, mar_from, mar_to)
+                 from_mar, to_mar)
+        self.submit_task_graph(
+            platform=platform, locale=locale, from_mar=from_mar, to_mar=to_mar,
+            revision=revision, branch=branch)
 
-    def submit_task_graph(self, platform, locale, from_mar, to_mar):
+    def submit_task_graph(self, platform, locale, from_mar, to_mar, revision,
+                          branch):
         graph_id = slugId()
         log.info("Submitting a new graph %s", graph_id)
-        task_graph = self.from_template(platform, locale, from_mar, to_mar)
+        task_graph = self.from_template(
+            platform=platform, locale=locale, from_mar=from_mar, to_mar=to_mar,
+            revision=revision, branch=branch)
+        log.debug("Graph definition: %s", task_graph)
         res = self.scheduler.createTaskGraph(graph_id, task_graph)
         log.info("Result was: %s", res)
         return graph_id
 
-    def from_template(self, platform, locale, from_mar, to_mar):
+    def from_template(self, platform, locale, from_mar, to_mar, revision,
+                      branch):
         """Reads and populates graph template.
 
         :param platform: buildbot platform (linux, macosx64)
@@ -218,6 +230,8 @@ class FunsizeWorker(ConsumerMixin):
             "balrog_username": self.balrog_client.auth[0],
             "balrog_password": self.balrog_client.auth[1],
             "encrypt_env_var": encrypt_env_var,
+            "revision": revision,
+            "branch": branch,
         }
         with open(template_file) as f:
             template = Template(f.read())

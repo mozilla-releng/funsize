@@ -24,7 +24,7 @@ tasks:
         description: |
           This task generates MAR files and publishes unsigned bits.
 
-      workerType: "b2gtest"
+      workerType: "funsize-mar-generator"
       provisionerId: "aws-provisioner-v1"
 
       tags:
@@ -79,6 +79,20 @@ tasks:
     task:
       created: '{{ now }}'
       deadline: '{{ fromNow("24 hours") }}'
+      routes:
+        - tc-treeherder-stage.{{ branch }}.{{ revision }}
+      extra:
+        machine:
+          platform: {{ platform }}
+        build:
+          platform: {{ platform }} # TODO: https://github.com/mozilla/treeherder/blob/master/ui/js/values.js
+        treeherderEnv:
+          - staging
+        treeherder:
+          symbol: {{ locale }}
+          groupSymbol: Upd
+          collection:
+            opt: true
       metadata:
         owner: release+funsize@mozilla.com
         source: https://github.com/rail/funsize-taskcluster
@@ -86,7 +100,7 @@ tasks:
         description: |
           This task publishes signed updates to Balrog.
 
-      workerType: "balrog"
+      workerType: "funsize-balrog"
       provisionerId: "aws-provisioner-v1"
       scopes:
         - docker-worker:feature:balrogVPNProxy
@@ -94,7 +108,7 @@ tasks:
         createdForUser: rail@mozilla.com
 
       payload:
-        image: 'rail/funsize-balrog-submitter:v0.6'
+        image: 'rail/funsize-balrog-submitter:v0.8'
         maxRunTime: 600
         command:
             - /runme.sh

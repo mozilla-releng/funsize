@@ -15,7 +15,7 @@ class TestFunsizeWorkerFromTemplate(TestCase):
                           queue_name="qname", scheduler="scheduler",
                           balrog_client=balrog_client, s3_info=s3_info)
         self.tg = w.from_template("win32", "uk", "https://from_mar/",
-                                  "http://to_mar/s")
+                                  "http://to_mar/s", "1234", "branch")
 
     def test_deps1(self):
         """Second task should require first task"""
