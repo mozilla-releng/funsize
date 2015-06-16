@@ -61,6 +61,8 @@ def main():
     else:
         tc_opts = config["taskcluster"]
 
+    th_api_root = os.environ.get("TH_API_ROOT", config["th_api_root"])
+
     cert = config["balrog"].get("cert")
     balrog_client = BalrogClient(api_root=api_root, auth=auth, cert=cert)
     scheduler = taskcluster.Scheduler(tc_opts)
@@ -71,7 +73,8 @@ def main():
         FunsizeWorker(connection=connection, queue_name=queue_name,
                       exchange=config["pulse"]["exchange"],
                       balrog_client=balrog_client,
-                      scheduler=scheduler, s3_info=s3_info).run()
+                      scheduler=scheduler, s3_info=s3_info,
+                      th_api_root=th_api_root).run()
 
 
 if __name__ == '__main__':

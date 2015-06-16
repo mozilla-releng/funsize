@@ -3,6 +3,8 @@ import json
 import os
 import pgpy
 from taskcluster import slugId
+import requests
+import redo
 
 
 def properties_to_dict(props):
@@ -58,3 +60,31 @@ def stable_slugId():
         return _cache[name]
 
     return closure
+
+
+def buildbot_to_treeherder(platform):
+    # Coming from https://github.com/mozilla/treeherder/blob/master/ui/js/values.js
+    m = {
+        "linux": "linux32",
+        "linux64": "linux64",
+        "macosx64": "osx-10-10",
+        "win32": "windowsxp",
+        "win64": "windows8-64",
+    }
+    return m[platform]
+
+
+def revision_to_revision_hash(th_api_root, branch, revision):
+    url = "{th_api_root}/project/{branch}/revision-lookup".format(
+        th_api_root=th_api_root, branch=branch
+    )
+    params = {"revision": revision}
+    for _ in redo.retrier(sleeptime=5, max_sleeptime=30):
+        try:
+            r = requests.get(url, params=params)
+            return r.json()[revision]["revision_hash"]
+        except:
+            pass
+    else:
+        raise RuntimeError("Cannot fetch revision hash for %s %s", branch,
+                           revision)

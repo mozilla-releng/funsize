@@ -1,6 +1,7 @@
 from unittest import TestCase
 from funsize.worker import FunsizeWorker
 from funsize.balrog import BalrogClient
+import mock
 
 
 class TestFunsizeWorkerFromTemplate(TestCase):
@@ -13,9 +14,12 @@ class TestFunsizeWorkerFromTemplate(TestCase):
                    "aws_secret_access_key": "s"}
         w = FunsizeWorker(connection=None, exchange="exchange",
                           queue_name="qname", scheduler="scheduler",
-                          balrog_client=balrog_client, s3_info=s3_info)
-        self.tg = w.from_template("win32", "uk", "https://from_mar/",
-                                  "http://to_mar/s", "1234", "branch")
+                          balrog_client=balrog_client, s3_info=s3_info,
+                          th_api_root="https://localhost/api")
+        with mock.patch("funsize.worker.revision_to_revision_hash") as m:
+            m.return_value = "123123"
+            self.tg = w.from_template("win32", "uk", "https://from_mar/",
+                                      "http://to_mar/s", "1234", "branch")
 
     def test_deps1(self):
         """Second task should require first task"""

@@ -10,7 +10,8 @@ import yaml
 import json
 from jinja2 import Template
 
-from funsize.utils import properties_to_dict, encrypt_env_var, stable_slugId
+from funsize.utils import properties_to_dict, encrypt_env_var, stable_slugId, \
+    revision_to_revision_hash, buildbot_to_treeherder
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +30,7 @@ BUILDERS = [
 class FunsizeWorker(ConsumerMixin):
 
     def __init__(self, connection, queue_name, exchange, balrog_client,
-                 scheduler, s3_info):
+                 scheduler, s3_info, th_api_root):
         """Funsize consumer worker
         :type connection: kombu.Connection
         :param queue_name: Full queue name, including queue/<user> prefix
@@ -44,6 +45,7 @@ class FunsizeWorker(ConsumerMixin):
         self.balrog_client = balrog_client
         self.scheduler = scheduler
         self.s3_info = s3_info
+        self.th_api_root = th_api_root
 
     @property
     def routing_keys(self):
@@ -232,6 +234,9 @@ class FunsizeWorker(ConsumerMixin):
             "encrypt_env_var": encrypt_env_var,
             "revision": revision,
             "branch": branch,
+            "treeherder_platform": buildbot_to_treeherder(platform),
+            "revision_hash": revision_to_revision_hash(self.th_api_root,
+                                                       branch, revision),
         }
         with open(template_file) as f:
             template = Template(f.read())

@@ -28,6 +28,7 @@ setup(
         "PyHawk-with-a-single-extra-commit",
         "Jinja2",
         "PyYAML",
+        "redo",
         # Because taskcluster hard pins this version...
         "requests==2.4.3",
         "singledispatch",

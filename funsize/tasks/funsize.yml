@@ -80,7 +80,7 @@ tasks:
       created: '{{ now }}'
       deadline: '{{ fromNow("24 hours") }}'
       routes:
-        - tc-treeherder-stage.{{ branch }}.{{ revision }}
+        - tc-treeherder-stage.{{ branch }}.{{ revision_hash }}
       extra:
         treeherderEnv:
           - staging
@@ -90,9 +90,9 @@ tasks:
           collection:
             opt: true
           machine:
-            platform: {{ platform }}
+            platform: {{ treeherder_platform }}
           build:
-            platform: {{ platform }} # TODO: https://github.com/mozilla/treeherder/blob/master/ui/js/values.js
+            platform: {{ treeherder_platform }} # TODO: https://github.com/mozilla/treeherder/blob/master/ui/js/values.js
 
       metadata:
         owner: release+funsize@mozilla.com

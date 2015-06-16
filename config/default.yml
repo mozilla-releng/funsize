@@ -20,3 +20,4 @@ s3:
     bucket: null
     aws_access_key_id: null
     aws_secret_access_key: null
+th_api_root: https://treeherder.mozilla.org/api
