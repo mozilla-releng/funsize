@@ -82,10 +82,6 @@ tasks:
       routes:
         - tc-treeherder-stage.{{ branch }}.{{ revision }}
       extra:
-        machine:
-          platform: {{ platform }}
-        build:
-          platform: {{ platform }} # TODO: https://github.com/mozilla/treeherder/blob/master/ui/js/values.js
         treeherderEnv:
           - staging
         treeherder:
@@ -93,6 +89,11 @@ tasks:
           groupSymbol: Upd
           collection:
             opt: true
+          machine:
+            platform: {{ platform }}
+          build:
+            platform: {{ platform }} # TODO: https://github.com/mozilla/treeherder/blob/master/ui/js/values.js
+
       metadata:
         owner: release+funsize@mozilla.com
         source: https://github.com/rail/funsize-taskcluster
