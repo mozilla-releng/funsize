@@ -29,7 +29,7 @@ BUILDERS = [
 class FunsizeWorker(ConsumerMixin):
 
     def __init__(self, connection, queue_name, exchange, balrog_client,
-                 scheduler, s3_info):
+                 scheduler, s3_info, balrog_worker_api_root):
         """Funsize consumer worker
         :type connection: kombu.Connection
         :param queue_name: Full queue name, including queue/<user> prefix
@@ -44,6 +44,7 @@ class FunsizeWorker(ConsumerMixin):
         self.balrog_client = balrog_client
         self.scheduler = scheduler
         self.s3_info = s3_info
+        self.balrog_worker_api_root = balrog_worker_api_root
 
     @property
     def routing_keys(self):
@@ -226,7 +227,7 @@ class FunsizeWorker(ConsumerMixin):
             "s3_bucket": self.s3_info["s3_bucket"],
             "aws_access_key_id": self.s3_info["aws_access_key_id"],
             "aws_secret_access_key": self.s3_info["aws_secret_access_key"],
-            "balrog_api_root": self.balrog_client.api_root,
+            "balrog_api_root": self.balrog_worker_api_root,
             "balrog_username": self.balrog_client.auth[0],
             "balrog_password": self.balrog_client.auth[1],
             "encrypt_env_var": encrypt_env_var,

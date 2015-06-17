@@ -13,7 +13,8 @@ class TestFunsizeWorkerFromTemplate(TestCase):
                    "aws_secret_access_key": "s"}
         w = FunsizeWorker(connection=None, exchange="exchange",
                           queue_name="qname", scheduler="scheduler",
-                          balrog_client=balrog_client, s3_info=s3_info)
+                          balrog_client=balrog_client, s3_info=s3_info,
+                          balrog_worker_api_root="http://balrog/api")
         self.tg = w.from_template("win32", "uk", "https://from_mar/",
                                   "http://to_mar/s", "1234", "branch")
 
