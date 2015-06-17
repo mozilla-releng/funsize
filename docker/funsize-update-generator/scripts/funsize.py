@@ -67,7 +67,7 @@ def generate_partial(work_env, from_dir, to_dir, dest_mar, channel_ids,
     make_incremental_update = os.path.join(work_env.workdir,
                                            "make_incremental_update.sh")
     out = sh.bash(make_incremental_update, dest_mar, from_dir, to_dir,
-                  _cwd=work_env.workdir, _env=env, _timeout=300,
+                  _cwd=work_env.workdir, _env=env, _timeout=600,
                   _err_to_out=True)
     if out:
         log.debug(out)
