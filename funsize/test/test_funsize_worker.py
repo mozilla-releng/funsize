@@ -15,7 +15,8 @@ class TestFunsizeWorkerFromTemplate(TestCase):
         w = FunsizeWorker(connection=None, exchange="exchange",
                           queue_name="qname", scheduler="scheduler",
                           balrog_client=balrog_client, s3_info=s3_info,
-                          th_api_root="https://localhost/api")
+                          th_api_root="https://localhost/api",
+                          balrog_worker_api_root="http://balrog/api")
         with mock.patch("funsize.worker.revision_to_revision_hash") as m:
             m.return_value = "123123"
             self.tg = w.from_template("win32", "uk", "https://from_mar/",

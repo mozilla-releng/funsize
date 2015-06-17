@@ -30,6 +30,8 @@ def main():
     config = yaml.safe_load(args.config)
 
     api_root = os.environ.get("BALROG_API_ROOT", config["balrog"]["api_root"])
+    balrog_worker_api_root = os.environ.get(
+        "BALROG_WORKER_API_ROOT", config["balrog"]["worker_api_root"])
     auth = (
         os.environ.get("BALROG_USERNAME", config["balrog"]["username"]),
         os.environ.get("BALROG_PASSWORD", config["balrog"]["password"]),
@@ -74,7 +76,8 @@ def main():
                       exchange=config["pulse"]["exchange"],
                       balrog_client=balrog_client,
                       scheduler=scheduler, s3_info=s3_info,
-                      th_api_root=th_api_root).run()
+                      th_api_root=th_api_root,
+                      balrog_worker_api_root=balrog_worker_api_root).run()
 
 
 if __name__ == '__main__':
