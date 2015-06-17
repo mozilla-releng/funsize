@@ -78,6 +78,8 @@ def revision_to_revision_hash(th_api_root, branch, revision):
     url = "{th_api_root}/project/{branch}/revision-lookup".format(
         th_api_root=th_api_root, branch=branch
     )
+    # Use short revision for treeherder API
+    revision = revision[:12]
     params = {"revision": revision}
     for _ in redo.retrier(sleeptime=5, max_sleeptime=30):
         try:
