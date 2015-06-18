@@ -33,8 +33,7 @@ def encrypt_env_var(task_id, start_time, end_time, name, value):
 
 
 def encrypt(message):
-    # TODO: load the key once
-    """Encrypte and base64 encode message.
+    """Encrypt and base64 encode message.
 
     :type message: str or unicode
     :return: base64 representation of binary (unarmoured) encrypted message

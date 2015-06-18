@@ -92,7 +92,7 @@ tasks:
           machine:
             platform: {{ treeherder_platform }}
           build:
-            platform: {{ treeherder_platform }} # TODO: https://github.com/mozilla/treeherder/blob/master/ui/js/values.js
+            platform: {{ treeherder_platform }}
 
       metadata:
         owner: release+funsize@mozilla.com

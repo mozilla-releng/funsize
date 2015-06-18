@@ -1,4 +1,5 @@
 .tox/
 .coverage
 dist
-funsize.egg-info
+*.egg-info
+dist/

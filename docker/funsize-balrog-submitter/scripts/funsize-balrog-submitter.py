@@ -24,7 +24,7 @@ def copy_to_s3(bucket_name, aws_access_key_id, aws_secret_access_key,
                mar_url, mar_dest):
     conn = S3Connection(aws_access_key_id, aws_secret_access_key)
     bucket = conn.get_bucket(bucket_name)
-    # TODO: check if key exists and change the name 
+    # TODO: check if key exists and change the name
     key = bucket.new_key(mar_dest)
     r = requests.get(mar_url)
     key.set_contents_from_string(r.content)
