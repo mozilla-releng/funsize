@@ -64,7 +64,7 @@ tasks:
       workerType: "signing-worker-v1"
       provisionerId: "signing-provisioner-v1"
       scopes:
-          - signing:cert:dep-signing
+          - signing:cert:nightly-signing
           - signing:format:gpg
           - signing:format:mar
       tags:
