@@ -3,7 +3,9 @@ MAINTAINER Rail Aliiev <rail@mozilla.com>
 
 # Required software
 ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get update -q && apt-get install -yyq python python-pip python-cryptography
+RUN apt-get update -q && \
+    apt-get install -yyq python python-pip python-cryptography \
+    clamav clamav-freshclam
 RUN useradd -d /home/worker -s /bin/bash -m worker
 COPY requirements.txt /tmp/
 RUN pip install -r /tmp/requirements.txt
@@ -18,6 +20,7 @@ COPY runme.sh /runme.sh
 RUN chmod 755 /home/worker/bin/* /runme.sh
 RUN mkdir /home/worker/keys
 COPY *.pubkey /home/worker/keys/
+RUN freshclam --verbose
 
 ENV           HOME          /home/worker
 ENV           SHELL         /bin/bash
