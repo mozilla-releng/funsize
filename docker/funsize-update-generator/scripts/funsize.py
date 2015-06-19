@@ -12,8 +12,15 @@ import tempfile
 
 import requests
 import sh
+from mardor.marfile import MarFile
 
 log = logging.getLogger(__name__)
+
+
+def verify_signature(mar, signature):
+    log.info("Checking %s signature", mar)
+    m = MarFile(mar, signature_versions=[(1, signature)])
+    m.verify_signatures()
 
 
 def download(url, dest, mode=None):
@@ -140,6 +147,7 @@ def main():
     parser.add_argument("--locale", required=True)
     parser.add_argument("--workdir")
     parser.add_argument("--branch")
+    parser.add_argument("--signing-cert", required=True)
     parser.add_argument("-q", "--quiet", dest="log_level",
                         action="store_const", const=logging.WARNING,
                         default=logging.DEBUG)
@@ -155,6 +163,7 @@ def main():
         dest = os.path.join(work_env.workdir, f.split("/")[-1])
         unpack_dir = os.path.join(work_env.workdir, mar_type)
         download(f, dest)
+        verify_signature(dest, args.signing_cert)
         complete_mars["%s_size" % mar_type] = os.path.getsize(dest)
         complete_mars["%s_hash" % mar_type] = get_hash(dest)
         unpack(work_env, dest, unpack_dir)

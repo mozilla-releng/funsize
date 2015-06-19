@@ -31,7 +31,7 @@ tasks:
         createdForUser: rail@mozilla.com
 
       payload:
-        image: 'rail/funsize-update-generator:v0.2'
+        image: 'rail/funsize-update-generator:v0.3'
         maxRunTime: 900
         command:
             - /runme.sh
@@ -41,6 +41,7 @@ tasks:
           TO_MAR: '{{ to_MAR }}'
           PLATFORM: '{{ platform }}'
           LOCALE: '{{ locale }}'
+          SIGNING_CERT: 'nightly'
 
         artifacts:
           'public/env':
