@@ -15,6 +15,7 @@ import sh
 from mardor.marfile import MarFile
 
 log = logging.getLogger(__name__)
+ALLOWED_URL_PREFIXES = ["http://download.cdn.mozilla.net/pub/mozilla.org/firefox/nightly/"]
 
 
 def verify_signature(mar, signature):
@@ -137,6 +138,13 @@ class WorkEnv(object):
         return my_env
 
 
+def verify_allowed_url(mar):
+    if not any(mar.startswith(prefix) for prefix in ALLOWED_URL_PREFIXES):
+        raise ValueError("{mar} is not in allowed URL prefixes: {p}".format(
+            mar=mar, p=ALLOWED_URL_PREFIXES
+        ))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--from-mar", required=True)
@@ -155,6 +163,8 @@ def main():
 
     logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s",
                         level=args.log_level)
+    for mar in (args.from_mar, args.to_mar):
+        verify_allowed_url(mar)
 
     work_env = WorkEnv(workdir=args.workdir)
     work_env.setup()
