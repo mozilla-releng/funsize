@@ -15,7 +15,9 @@ import sh
 from mardor.marfile import MarFile
 
 log = logging.getLogger(__name__)
-ALLOWED_URL_PREFIXES = ["http://download.cdn.mozilla.net/pub/mozilla.org/firefox/nightly/"]
+ALLOWED_URL_PREFIXES = [
+    "http://download.cdn.mozilla.net/pub/mozilla.org/firefox/nightly/"
+]
 
 
 def verify_signature(mar, signature):
