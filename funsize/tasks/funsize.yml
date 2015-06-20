@@ -34,7 +34,7 @@ tasks:
         image: 'rail/funsize-update-generator:v0.5'
         maxRunTime: 900
         command:
-            - /runme.sh
+          - /runme.sh
 
         env:
           FROM_MAR: '{{ from_MAR }}'
@@ -65,9 +65,9 @@ tasks:
       workerType: "signing-worker-v1"
       provisionerId: "signing-provisioner-v1"
       scopes:
-          - signing:cert:nightly-signing
-          - signing:format:gpg
-          - signing:format:mar
+        - signing:cert:nightly-signing
+        - signing:format:gpg
+        - signing:format:mar
       tags:
         createdForUser: rail@mozilla.com
 
@@ -113,7 +113,7 @@ tasks:
         image: 'rail/funsize-balrog-submitter:v0.8'
         maxRunTime: 600
         command:
-            - /runme.sh
+          - /runme.sh
 
         env:
           PARENT_TASK_ARTIFACTS_URL_PREFIX: 'https://queue.taskcluster.net/v1/task/{{ stable_slugId("signing_task") }}/artifacts/public/env'
