@@ -5,31 +5,55 @@ import logging
 import argparse
 import json
 import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__),
-                "/home/worker/tools/lib/python/vendor/requests-0.10.8"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__),
-                "/home/worker/tools/lib/python/vendor/certifi-2015.04.28"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__),
-                "/home/worker/tools/lib/python/vendor/boto-2.38.0"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__),
-                "/home/worker/tools/lib/python"))
+
+sys.path.insert(0, os.path.join(
+    os.path.dirname(__file__),
+    "/home/worker/tools/lib/python/vendor/requests-0.10.8"))
+sys.path.insert(0, os.path.join(
+    os.path.dirname(__file__),
+    "/home/worker/tools/lib/python/vendor/certifi-2015.04.28"))
+sys.path.insert(0, os.path.join(
+    os.path.dirname(__file__),
+    "/home/worker/tools/lib/python/vendor/boto-2.38.0"))
+sys.path.insert(0, os.path.join(
+    os.path.dirname(__file__), "/home/worker/tools/lib/python"))
 
 from boto.s3.connection import S3Connection
 from balrog.submitter.cli import NightlySubmitterV4
 from util.retry import retry
 import requests
 
+log = logging.getLogger(__name__)
+
 
 def copy_to_s3(bucket_name, aws_access_key_id, aws_secret_access_key,
                mar_url, mar_dest):
     conn = S3Connection(aws_access_key_id, aws_secret_access_key)
     bucket = conn.get_bucket(bucket_name)
-    # TODO: check if key exists and change the name
-    key = bucket.new_key(mar_dest)
     r = requests.get(mar_url)
-    key.set_contents_from_string(r.content)
-    key.set_acl("public-read")
-    return key.generate_url(expires_in=0, query_auth=False)
+    for name in possible_names(mar_dest, 10):
+        log.info("Checking if %s already exists", name)
+        if not bucket.get_key(name):
+            log.info("Uploading to %s...", name)
+            key = bucket.new_key(name)
+            # There is a chance for race condition here. To avoid it we check
+            # the return value with replace=False. It should be not None.
+            length = key.set_contents_from_string(r.content, replace=False)
+            if length is None:
+                log.warn("Name race condition using %s, trying again...", name)
+                continue
+            else:
+                key.make_public()
+                return key.generate_url(expires_in=0, query_auth=False)
+        else:
+            log.info("%s already exists, trying another one...", name)
+
+
+def possible_names(initial_name, amount):
+    """Generate names appending counter before extension"""
+    prefix, ext = os.path.splitext(initial_name)
+    return [initial_name] + ["{}-{}{}".format(prefix, n, ext) for n in
+                             range(1, amount + 1)]
 
 
 def main():
@@ -102,7 +126,7 @@ def main():
             appVersion=entry["version"], locale=entry["locale"],
             hashFunction='sha512', extVersion=entry["version"],
             partialInfo=partial_info, completeInfo=complete_info)
-        )
+            )
 
 
 if __name__ == '__main__':
