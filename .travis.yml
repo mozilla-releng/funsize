@@ -11,9 +11,3 @@ after_success:
 
 # http://docs.travis-ci.com/user/workers/container-based-infrastructure/
 sudo: false
-
-deploy:
-  provider: heroku
-  app: funsize-dev
-  api_key:
-    secure: hnbpyFSwGNNSulYsfMJLp0g/pB7xDGtWw3X2OLw5tYd1ha44JSP61qOzZO1SceI4s6p3lej9Vn6hFwASzU/v8rGtyP/o3UkUwK/+Pg4+TnJgrvbg+dtmfuQXcKJVVFvI9dk6T/VVMkl26Rs5/dMlmjHg25WrTEX49RlAYhgQYjw=
