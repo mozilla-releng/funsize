@@ -36,4 +36,9 @@ setup(
         "taskcluster>=0.0.16",
         "wsgiref",
     ],
+    tests_require=[
+        'hypothesis',
+        'pytest',
+        'mock',
+    ],
 )

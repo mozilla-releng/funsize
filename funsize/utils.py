@@ -11,7 +11,8 @@ def properties_to_dict(props):
     """Convert properties tuple into dict"""
     props_dict = {}
     for prop in props:
-        props_dict[prop[0]] = prop[1]
+        if len(prop) >= 2:
+            props_dict[prop[0]] = prop[1]
     return props_dict
 
 
