@@ -86,8 +86,8 @@ tasks:
         treeherderEnv:
           - staging
         treeherder:
-          symbol: {{ locale }}
-          groupSymbol: Update-{{ update_number }}
+          symbol: {{ locale }}-{{ update_number }}
+          groupSymbol: Update
           collection:
             opt: true
           machine:
