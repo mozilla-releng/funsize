@@ -173,7 +173,9 @@ class FunsizeWorker(ConsumerMixin):
         # TODO: move limit to config
         # Get last 5 releases (including current),
         # generate partial for 4 latest
-        last_releases = self.balrog_client.get_releases(product, branch)[:5]
+        # TODO: use the following line
+        # last_releases = self.balrog_client.get_releases(product, branch)[:5]
+        last_releases = self.balrog_client.get_releases(product, branch)[:2]
         release_to = last_releases.pop(0)
         for update_number, release_from in enumerate(last_releases):
             log.debug("From: %s", release_from)
