@@ -171,39 +171,42 @@ class FunsizeWorker(ConsumerMixin):
         :param locale: en-US or locale
         """
         # TODO: move limit to config
-        # Get last 3 releases, generate partial from -2 to latest
-        last_releases = self.balrog_client.get_releases(product, branch)[:3]
-        release_to = last_releases[0]
-        release_from = last_releases[-1]
-        log.debug("From: %s", release_from)
-        log.debug("To: %s", release_to)
-        build_from = self.balrog_client.get_build(release_from,
-                                                  platform, locale)
-        log.debug("Build from: %s", build_from)
-        build_to = self.balrog_client.get_build(release_to, platform, locale)
-        log.debug("Build to: %s", build_to)
-        from_mar = build_from["completes"][0]["fileUrl"]
-        to_mar = build_to["completes"][0]["fileUrl"]
-        log.info("New Funsize task for %s %s, from %s to %s", platform, locale,
-                 from_mar, to_mar)
-        self.submit_task_graph(
-            platform=platform, locale=locale, from_mar=from_mar, to_mar=to_mar,
-            revision=revision, branch=branch)
+        # Get last 5 releases (including current),
+        # generate partial for 4 latest
+        last_releases = self.balrog_client.get_releases(product, branch)[:5]
+        release_to = last_releases.pop(0)
+        for update_number, release_from in enumerate(last_releases):
+            log.debug("From: %s", release_from)
+            log.debug("To: %s", release_to)
+            build_from = self.balrog_client.get_build(release_from,
+                                                      platform, locale)
+            log.debug("Build from: %s", build_from)
+            build_to = self.balrog_client.get_build(release_to, platform,
+                                                    locale)
+            log.debug("Build to: %s", build_to)
+            from_mar = build_from["completes"][0]["fileUrl"]
+            to_mar = build_to["completes"][0]["fileUrl"]
+            log.info("New Funsize task for %s %s, from %s to %s", platform,
+                     locale, from_mar, to_mar)
+            self.submit_task_graph(
+                platform=platform, locale=locale, from_mar=from_mar,
+                to_mar=to_mar, revision=revision, branch=branch,
+                update_number=update_number + 1)
 
     def submit_task_graph(self, platform, locale, from_mar, to_mar, revision,
-                          branch):
+                          branch, update_number):
         graph_id = slugId()
         log.info("Submitting a new graph %s", graph_id)
         task_graph = self.from_template(
             platform=platform, locale=locale, from_mar=from_mar, to_mar=to_mar,
-            revision=revision, branch=branch)
+            revision=revision, branch=branch, update_number=update_number)
         log.debug("Graph definition: %s", task_graph)
         res = self.scheduler.createTaskGraph(graph_id, task_graph)
         log.info("Result was: %s", res)
         return graph_id
 
     def from_template(self, platform, locale, from_mar, to_mar, revision,
-                      branch):
+                      branch, update_number):
         """Reads and populates graph template.
 
         :param platform: buildbot platform (linux, macosx64)
@@ -238,6 +241,7 @@ class FunsizeWorker(ConsumerMixin):
             "treeherder_platform": buildbot_to_treeherder(platform),
             "revision_hash": revision_to_revision_hash(self.th_api_root,
                                                        branch, revision),
+            "update_number": update_number,
         }
         with open(template_file) as f:
             template = Template(f.read())

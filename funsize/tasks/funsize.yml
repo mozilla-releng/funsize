@@ -87,7 +87,7 @@ tasks:
           - staging
         treeherder:
           symbol: {{ locale }}
-          groupSymbol: Upd
+          groupSymbol: Update-{{ update_number }}
           collection:
             opt: true
           machine:
