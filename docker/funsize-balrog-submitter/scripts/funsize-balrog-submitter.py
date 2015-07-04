@@ -54,7 +54,7 @@ def copy_to_s3(bucket_name, aws_access_key_id, aws_secret_access_key,
                 key.make_public()
                 return key.generate_url(expires_in=0, query_auth=False)
         else:
-            if key.md5 == get_hash(r.content):
+            if get_hash(key.get_contents_as_string()) == get_hash(r.content):
                 log.info("%s has the same MD5 checksum, not uploading...")
                 return None
             log.info("%s already exists with different checksum, "
