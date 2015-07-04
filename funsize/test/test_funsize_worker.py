@@ -20,7 +20,7 @@ class TestFunsizeWorkerFromTemplate(TestCase):
         with mock.patch("funsize.worker.revision_to_revision_hash") as m:
             m.return_value = "123123"
             self.tg = w.from_template("win32", "uk", "https://from_mar/",
-                                      "http://to_mar/s", "1234", "branch")
+                                      "http://to_mar/s", "1234", "branch", 3)
 
     def test_deps1(self):
         """Second task should require first task"""
