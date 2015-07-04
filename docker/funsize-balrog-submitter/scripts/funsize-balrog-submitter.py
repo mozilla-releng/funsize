@@ -5,6 +5,7 @@ import logging
 import argparse
 import json
 import sys
+import hashlib
 
 sys.path.insert(0, os.path.join(
     os.path.dirname(__file__),
@@ -26,6 +27,12 @@ import requests
 log = logging.getLogger(__name__)
 
 
+def get_hash(content, hash_type="md5"):
+    h = hashlib.new(hash_type)
+    h.update(content)
+    return h.hexdigest()
+
+
 def copy_to_s3(bucket_name, aws_access_key_id, aws_secret_access_key,
                mar_url, mar_dest):
     conn = S3Connection(aws_access_key_id, aws_secret_access_key)
@@ -33,7 +40,8 @@ def copy_to_s3(bucket_name, aws_access_key_id, aws_secret_access_key,
     r = requests.get(mar_url)
     for name in possible_names(mar_dest, 10):
         log.info("Checking if %s already exists", name)
-        if not bucket.get_key(name):
+        key = bucket.get_key(name)
+        if not key:
             log.info("Uploading to %s...", name)
             key = bucket.new_key(name)
             # There is a chance for race condition here. To avoid it we check
@@ -46,7 +54,13 @@ def copy_to_s3(bucket_name, aws_access_key_id, aws_secret_access_key,
                 key.make_public()
                 return key.generate_url(expires_in=0, query_auth=False)
         else:
-            log.info("%s already exists, trying another one...", name)
+            if key.md5 == get_hash(r.content):
+                log.info("%s has the same MD5 checksum, not uploading...")
+                return None
+            log.info("%s already exists with different checksum, "
+                     "trying another one...", name)
+
+    raise RuntimeError("Cannot generate a unique name for %s", mar_dest)
 
 
 def possible_names(initial_name, amount):
@@ -105,28 +119,43 @@ def main():
             s3_bucket, aws_access_key_id, aws_secret_access_key,
             complete_mar_url, complete_mar_dest)
 
-        partial_info = [
-            {
-                "url": final_partial_mar_url,
-                "hash": entry["hash"],
-                "from_buildid": entry["from_buildid"],
-                "size": entry["size"],
-            }
-        ]
-        complete_info = [
-            {
-                "url": final_complete_mar_url,
-                "hash": entry["to_hash"],
-                "size": entry["to_size"],
-            }
-        ]
-        retry(lambda: submitter.run(
-            platform=entry["platform"], buildID=entry["to_buildid"],
-            productName=entry["appName"], branch=entry["branch"],
-            appVersion=entry["version"], locale=entry["locale"],
-            hashFunction='sha512', extVersion=entry["version"],
-            partialInfo=partial_info, completeInfo=complete_info)
-            )
+        partial_info = None
+        complete_info = None
+
+        if final_partial_mar_url:
+            partial_info = [
+                {
+                    "url": final_partial_mar_url,
+                    "hash": entry["hash"],
+                    "from_buildid": entry["from_buildid"],
+                    "size": entry["size"],
+                }
+            ]
+        else:
+            log.warn("%s already submitted, skipping", partial_mar_url)
+
+        if final_complete_mar_url:
+            complete_info = [
+                {
+                    "url": final_complete_mar_url,
+                    "hash": entry["to_hash"],
+                    "size": entry["to_size"],
+                }
+            ]
+        else:
+            log.warn("%s already submitted, skipping", complete_mar_url)
+
+        if partial_info or complete_info:
+            retry(lambda: submitter.run(
+                platform=entry["platform"], buildID=entry["to_buildid"],
+                productName=entry["appName"], branch=entry["branch"],
+                appVersion=entry["version"], locale=entry["locale"],
+                hashFunction='sha512', extVersion=entry["version"],
+                partialInfo=partial_info, completeInfo=complete_info)
+                )
+        else:
+            log.critical("Nothing to submit")
+            raise RuntimeError("No data to submit")
 
 
 if __name__ == '__main__':
