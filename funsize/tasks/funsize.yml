@@ -110,7 +110,7 @@ tasks:
         createdForUser: rail@mozilla.com
 
       payload:
-        image: 'rail/funsize-balrog-submitter:v0.11'
+        image: 'rail/funsize-balrog-submitter:v0.12'
         maxRunTime: 600
         command:
           - /runme.sh
