@@ -51,8 +51,13 @@ def copy_to_s3(bucket_name, aws_access_key_id, aws_secret_access_key,
                 log.warn("Name race condition using %s, trying again...", name)
                 continue
             else:
-                key.make_public()
-                return key.generate_url(expires_in=0, query_auth=False)
+                # key.make_public() may lead to race conditions, because
+                # it doesn't pass version_id, so it may not set permissions
+                bucket.set_canned_acl(acl_str='public-read', key_name=name,
+                                      version_id=key.version_id)
+                # Use explicit version_id to avoid using "latest" version
+                return key.generate_url(expires_in=0, query_auth=False,
+                                        version_id=key.version_id)
         else:
             if get_hash(key.get_contents_as_string()) == get_hash(r.content):
                 log.info("%s has the same MD5 checksum, not uploading...")
