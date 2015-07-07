@@ -61,7 +61,8 @@ def copy_to_s3(bucket_name, aws_access_key_id, aws_secret_access_key,
         else:
             if get_hash(key.get_contents_as_string()) == get_hash(r.content):
                 log.info("%s has the same MD5 checksum, not uploading...")
-                return None
+                return key.generate_url(expires_in=0, query_auth=False,
+                                        version_id=key.version_id)
             log.info("%s already exists with different checksum, "
                      "trying another one...", name)
 
@@ -127,40 +128,29 @@ def main():
         partial_info = None
         complete_info = None
 
-        if final_partial_mar_url:
-            partial_info = [
-                {
-                    "url": final_partial_mar_url,
-                    "hash": entry["hash"],
-                    "from_buildid": entry["from_buildid"],
-                    "size": entry["size"],
-                }
-            ]
-        else:
-            log.warn("%s already submitted, skipping", partial_mar_url)
+        partial_info = [
+            {
+                "url": final_partial_mar_url,
+                "hash": entry["hash"],
+                "from_buildid": entry["from_buildid"],
+                "size": entry["size"],
+            }
+        ]
+        complete_info = [
+            {
+                "url": final_complete_mar_url,
+                "hash": entry["to_hash"],
+                "size": entry["to_size"],
+            }
+        ]
 
-        if final_complete_mar_url:
-            complete_info = [
-                {
-                    "url": final_complete_mar_url,
-                    "hash": entry["to_hash"],
-                    "size": entry["to_size"],
-                }
-            ]
-        else:
-            log.warn("%s already submitted, skipping", complete_mar_url)
-
-        if partial_info or complete_info:
-            retry(lambda: submitter.run(
-                platform=entry["platform"], buildID=entry["to_buildid"],
-                productName=entry["appName"], branch=entry["branch"],
-                appVersion=entry["version"], locale=entry["locale"],
-                hashFunction='sha512', extVersion=entry["version"],
-                partialInfo=partial_info, completeInfo=complete_info)
-                )
-        else:
-            log.critical("Nothing to submit")
-            raise RuntimeError("No data to submit")
+        retry(lambda: submitter.run(
+            platform=entry["platform"], buildID=entry["to_buildid"],
+            productName=entry["appName"], branch=entry["branch"],
+            appVersion=entry["version"], locale=entry["locale"],
+            hashFunction='sha512', extVersion=entry["version"],
+            partialInfo=partial_info, completeInfo=complete_info)
+            )
 
 
 if __name__ == '__main__':
