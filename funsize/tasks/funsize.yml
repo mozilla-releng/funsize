@@ -3,7 +3,7 @@ metadata:
   name: Funsize
   description: Funsize task graph for nightly builds and L10N repacks
   owner: release+funsize@mozilla.com
-  source: https://github.com/rail/funsize-taskcluster
+  source: https://github.com/mozilla/funsize
 
 scopes:
   - queue:*
@@ -19,16 +19,33 @@ tasks:
       deadline: '{{ fromNow("24 hours") }}'
       metadata:
         owner: release+funsize@mozilla.com
-        source: https://github.com/rail/funsize-taskcluster
+        source: https://github.com/mozilla/funsize
         name: "[funsize] Update generating task"
         description: |
           This task generates MAR files and publishes unsigned bits.
+
+      routes:
+        - tc-treeherder-stage.{{ branch }}.{{ revision_hash }}
+        - index.funsize.v1.{{ branch }}.revision.{{ platform }}.{{ revision }}.{{ locale }}.{{ update_number }}.updates
+        - index.funsize.v1.{{ branch }}.latest.{{ platform }}.{{ locale }}.{{ update_number }}.updates
+      extra:
+        treeherderEnv:
+          - staging
+        treeherder:
+          symbol: 1-{{ locale }}-{{ update_number }}
+          groupSymbol: Update
+          collection:
+            opt: true
+          machine:
+            platform: {{ treeherder_platform }}
+          build:
+            platform: {{ treeherder_platform }}
 
       workerType: "funsize-mar-generator"
       provisionerId: "aws-provisioner-v1"
 
       tags:
-        createdForUser: rail@mozilla.com
+        createdForUser: release+funsize@mozilla.com
 
       payload:
         image: 'rail/funsize-update-generator:v0.5'
@@ -57,10 +74,27 @@ tasks:
       deadline: '{{ fromNow("24 hours") }}'
       metadata:
         owner: release+funsize@mozilla.com
-        source: https://github.com/rail/funsize-taskcluster
+        source: https://github.com/mozilla/funsize
         name: "[funsize] MAR signing task"
         description: |
           This task signs MAR files and publishes signed bits.
+
+      routes:
+        - tc-treeherder-stage.{{ branch }}.{{ revision_hash }}
+        - index.funsize.v1.{{ branch }}.revision.{{ platform }}.{{ revision }}.{{ locale }}.{{ update_number }}.signing
+        - index.funsize.v1.{{ branch }}.latest.{{ platform }}.{{ locale }}.{{ update_number }}.signing
+      extra:
+        treeherderEnv:
+          - staging
+        treeherder:
+          symbol: 2-{{ locale }}-{{ update_number }}
+          groupSymbol: Update
+          collection:
+            opt: true
+          machine:
+            platform: {{ treeherder_platform }}
+          build:
+            platform: {{ treeherder_platform }}
 
       workerType: "signing-worker-v1"
       provisionerId: "signing-provisioner-v1"
@@ -69,7 +103,7 @@ tasks:
         - signing:format:gpg
         - signing:format:mar
       tags:
-        createdForUser: rail@mozilla.com
+        createdForUser: release+funsize@mozilla.com
 
       payload:
         signingManifest: 'https://queue.taskcluster.net/v1/task/{{ stable_slugId("update_generator_task") }}/artifacts/public/env/manifest.json'
@@ -82,11 +116,13 @@ tasks:
       deadline: '{{ fromNow("24 hours") }}'
       routes:
         - tc-treeherder-stage.{{ branch }}.{{ revision_hash }}
+        - index.funsize.v1.{{ branch }}.revision.{{ platform }}.{{ revision }}.{{ locale }}.{{ update_number }}.balrog
+        - index.funsize.v1.{{ branch }}.latest.{{ platform }}.{{ locale }}.{{ update_number }}.balrog
       extra:
         treeherderEnv:
           - staging
         treeherder:
-          symbol: {{ locale }}-{{ update_number }}
+          symbol: 3-{{ locale }}-{{ update_number }}
           groupSymbol: Update
           collection:
             opt: true
@@ -97,7 +133,7 @@ tasks:
 
       metadata:
         owner: release+funsize@mozilla.com
-        source: https://github.com/rail/funsize-taskcluster
+        source: https://github.com/mozilla/funsize
         name: "[funsize] Publish to Balrog"
         description: |
           This task publishes signed updates to Balrog.
@@ -107,7 +143,7 @@ tasks:
       scopes:
         - docker-worker:feature:balrogVPNProxy
       tags:
-        createdForUser: rail@mozilla.com
+        createdForUser: release+funsize@mozilla.com
 
       payload:
         image: 'rail/funsize-balrog-submitter:v0.12'
