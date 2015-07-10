@@ -1,2 +1,0 @@
-hg+https://hg.mozilla.org/build/tools@default
-boto
