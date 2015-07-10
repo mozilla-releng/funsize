@@ -32,7 +32,7 @@ tasks:
         treeherderEnv:
           - staging
         treeherder:
-          symbol: 1-{{ locale }}-{{ update_number }}
+          symbol: {{ locale }}-{{ update_number }}-1
           groupSymbol: Update
           collection:
             opt: true
@@ -87,7 +87,7 @@ tasks:
         treeherderEnv:
           - staging
         treeherder:
-          symbol: 2-{{ locale }}-{{ update_number }}
+          symbol: {{ locale }}-{{ update_number }}-2
           groupSymbol: Update
           collection:
             opt: true
@@ -122,7 +122,7 @@ tasks:
         treeherderEnv:
           - staging
         treeherder:
-          symbol: 3-{{ locale }}-{{ update_number }}
+          symbol: {{ locale }}-{{ update_number }}-3
           groupSymbol: Update
           collection:
             opt: true
