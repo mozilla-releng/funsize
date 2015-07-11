@@ -9,9 +9,10 @@ import logging
 import os
 import shutil
 import tempfile
-
 import requests
 import sh
+
+import redo
 from mardor.marfile import MarFile
 
 log = logging.getLogger(__name__)
@@ -168,7 +169,8 @@ def main():
     for mar in (args.from_mar, args.to_mar):
         verify_allowed_url(mar)
     log.info("Refreshing clamav db...")
-    sh.freshclam("--stdout", "--verbose", _timeout=600, _err_to_out=True)
+    redo.retry(lambda:
+        sh.freshclam("--stdout", "--verbose", _timeout=300, _err_to_out=True))
     log.info("Done.")
     work_env = WorkEnv(workdir=args.workdir)
     work_env.setup()

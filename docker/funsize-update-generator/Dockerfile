@@ -5,7 +5,7 @@ MAINTAINER Rail Aliiev <rail@mozilla.com>
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update -q && \
     apt-get install -yyq python python-pip python-cryptography \
-    clamav clamav-freshclam
+    clamav clamav-freshclam python-requests python-sh
 RUN useradd -d /home/worker -s /bin/bash -m worker
 COPY requirements.txt /tmp/
 RUN pip install -r /tmp/requirements.txt
