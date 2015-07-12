@@ -3,11 +3,18 @@ MAINTAINER Rail Aliiev <rail@mozilla.com>
 
 # Required software
 ENV DEBIAN_FRONTEND noninteractive
+# Chain apt-get commands with apt-get clean in a single docker RUN
+# to make sure that files are removed within a single docker layer
 RUN apt-get update -q && \
-    apt-get install -yyq python python-pip python-cryptography \
-    clamav clamav-freshclam python-requests python-sh
+    apt-get install -yyq --no-install-recommends \
+    python python-setuptools python-cryptography \
+    clamav clamav-freshclam python-requests python-sh && \
+    apt-get clean
 RUN useradd -d /home/worker -s /bin/bash -m worker
 COPY requirements.txt /tmp/
+# python-pip installs a lot of dependencies increasing the size of an image
+# drastically. Using easy_install saves us almost 200M.
+RUN easy_install pip
 RUN pip install -r /tmp/requirements.txt
 # cleanup
 RUN apt-get purge -y python-pip && apt-get autoremove -y

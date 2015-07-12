@@ -3,7 +3,11 @@ MAINTAINER Rail Aliiev <rail@mozilla.com>
 
 # Required software
 ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get update -q && apt-get install -yyq python mercurial wget python-boto
+# Chain apt-get commands with apt-get clean in a single docker RUN
+# to make sure that files are removed within a single docker layer
+RUN apt-get update -q && \
+    apt-get install -yyq --no-install-recommends python mercurial wget python-boto && \
+    apt-get clean
 RUN hg clone https://hg.mozilla.org/build/tools /home/worker/tools
 
 RUN useradd -d /home/worker -s /bin/bash -m worker
