@@ -16,9 +16,6 @@ COPY requirements.txt /tmp/
 # drastically. Using easy_install saves us almost 200M.
 RUN easy_install pip
 RUN pip install -r /tmp/requirements.txt
-# cleanup
-RUN apt-get purge -y python-pip && apt-get autoremove -y
-RUN rm -f /tmp/requirements.txt
 
 # scripts
 RUN mkdir /home/worker/bin
