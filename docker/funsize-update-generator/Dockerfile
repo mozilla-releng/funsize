@@ -7,8 +7,8 @@ ENV DEBIAN_FRONTEND noninteractive
 # to make sure that files are removed within a single docker layer
 RUN apt-get update -q && \
     apt-get install -yyq --no-install-recommends \
-    python python-setuptools python-cryptography \
-    clamav clamav-freshclam python-requests python-sh && \
+    python python-setuptools python-cryptography  libgetopt-simple-perl \
+    bzip2 clamav clamav-freshclam python-requests python-sh && \
     apt-get clean
 RUN useradd -d /home/worker -s /bin/bash -m worker
 COPY requirements.txt /tmp/
