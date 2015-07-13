@@ -15,7 +15,6 @@ sys.path.insert(0, os.path.join(
 from balrog.submitter.cli import NightlySubmitterV4
 from util.retry import retry
 
-
 log = logging.getLogger(__name__)
 
 
@@ -52,7 +51,8 @@ def copy_to_s3(bucket_name, aws_access_key_id, aws_secret_access_key,
                                         version_id=key.version_id)
         else:
             if get_hash(key.get_contents_as_string()) == get_hash(r.content):
-                log.info("%s has the same MD5 checksum, not uploading...")
+                log.info("%s has the same MD5 checksum, not uploading...",
+                         name)
                 return key.generate_url(expires_in=0, query_auth=False,
                                         version_id=key.version_id)
             log.info("%s already exists with different checksum, "
@@ -99,7 +99,7 @@ def main():
 
     manifest = json.load(open(args.manifest))
     auth = (balrog_username, balrog_password)
-    submitter = NightlySubmitterV4(args.api_root, auth, args.dummy)
+    submitter = NightlySubmitterV4(api_root=args.api_root, auth=auth, dummy=args.dummy)
     for entry in manifest:
         partial_mar_url = "{}/{}".format(args.artifacts_url_prefix,
                                          entry["mar"])
