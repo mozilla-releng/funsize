@@ -9,6 +9,7 @@ from taskcluster import slugId, stringDate, fromNow
 import yaml
 import json
 from jinja2 import Template
+import requests
 
 from funsize.utils import properties_to_dict, encrypt_env_var, stable_slugId, \
     revision_to_revision_hash, buildbot_to_treeherder
@@ -178,20 +179,23 @@ class FunsizeWorker(ConsumerMixin):
         for update_number, release_from in enumerate(last_releases):
             log.debug("From: %s", release_from)
             log.debug("To: %s", release_to)
-            build_from = self.balrog_client.get_build(release_from,
-                                                      platform, locale)
-            log.debug("Build from: %s", build_from)
-            build_to = self.balrog_client.get_build(release_to, platform,
-                                                    locale)
-            log.debug("Build to: %s", build_to)
-            from_mar = build_from["completes"][0]["fileUrl"]
-            to_mar = build_to["completes"][0]["fileUrl"]
-            log.info("New Funsize task for %s %s, from %s to %s", platform,
-                     locale, from_mar, to_mar)
-            self.submit_task_graph(
-                platform=platform, locale=locale, from_mar=from_mar,
-                to_mar=to_mar, revision=revision, branch=branch,
-                update_number=update_number + 1)
+            try:
+                build_from = self.balrog_client.get_build(release_from,
+                                                          platform, locale)
+                log.debug("Build from: %s", build_from)
+                build_to = self.balrog_client.get_build(release_to, platform,
+                                                        locale)
+                log.debug("Build to: %s", build_to)
+                from_mar = build_from["completes"][0]["fileUrl"]
+                to_mar = build_to["completes"][0]["fileUrl"]
+                log.info("New Funsize task for %s %s, from %s to %s", platform,
+                         locale, from_mar, to_mar)
+                self.submit_task_graph(
+                    platform=platform, locale=locale, from_mar=from_mar,
+                    to_mar=to_mar, revision=revision, branch=branch,
+                    update_number=update_number + 1)
+            except (requests.HTTPError, ValueError):
+                log.exception("Error getting build, skipping this scenario")
 
     def submit_task_graph(self, platform, locale, from_mar, to_mar, revision,
                           branch, update_number):

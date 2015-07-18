@@ -8,6 +8,7 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update -q && \
     apt-get install -yyq --no-install-recommends python mercurial wget python-boto && \
     apt-get clean
+
 RUN hg clone https://hg.mozilla.org/build/tools /home/worker/tools
 
 RUN useradd -d /home/worker -s /bin/bash -m worker

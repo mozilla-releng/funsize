@@ -36,7 +36,7 @@ class BalrogClient(object):
             "names_only": True
         }
 
-        log.debug("Connecting to %s", url)
+        log.info("Connecting to %s", url)
         req = requests.get(url, auth=self.auth, verify=self.verify,
                            params=params)
         req.raise_for_status()
