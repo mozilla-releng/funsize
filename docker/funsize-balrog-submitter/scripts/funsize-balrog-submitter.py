@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 import os
 import logging
 import argparse
@@ -7,7 +6,9 @@ import json
 import sys
 import hashlib
 import requests
+import tempfile
 from boto.s3.connection import S3Connection
+from mardor.marfile import MarFile
 
 sys.path.insert(0, os.path.join(
     os.path.dirname(__file__), "/home/worker/tools/lib/python"))
@@ -24,11 +25,30 @@ def get_hash(content, hash_type="md5"):
     return h.hexdigest()
 
 
-def copy_to_s3(bucket_name, aws_access_key_id, aws_secret_access_key,
-               mar_url, mar_dest):
+def download(url, dest, mode=None):
+    log.debug("Downloading %s to %s", url, dest)
+    r = requests.get(url)
+    with open(dest, 'wb') as fd:
+        for chunk in r.iter_content(4096):
+            fd.write(chunk)
+    if mode:
+        log.debug("chmod %o %s", mode, dest)
+        os.chmod(dest, mode)
+
+
+def verify_signature(mar, signature):
+    log.info("Checking %s signature", mar)
+    m = MarFile(mar, signature_versions=[(1, signature)])
+    m.verify_signatures()
+
+
+def verify_copy_to_s3(bucket_name, aws_access_key_id, aws_secret_access_key,
+                      mar_url, mar_dest, signing_cert):
     conn = S3Connection(aws_access_key_id, aws_secret_access_key)
     bucket = conn.get_bucket(bucket_name)
-    r = requests.get(mar_url)
+    _, dest = tempfile.mkstemp()
+    download(mar_url, dest)
+    verify_signature(dest, signing_cert)
     for name in possible_names(mar_dest, 10):
         log.info("Checking if %s already exists", name)
         key = bucket.get_key(name)
@@ -37,7 +57,7 @@ def copy_to_s3(bucket_name, aws_access_key_id, aws_secret_access_key,
             key = bucket.new_key(name)
             # There is a chance for race condition here. To avoid it we check
             # the return value with replace=False. It should be not None.
-            length = key.set_contents_from_string(r.content, replace=False)
+            length = key.set_contents_from_filename(dest, replace=False)
             if length is None:
                 log.warn("Name race condition using %s, trying again...", name)
                 continue
@@ -50,7 +70,8 @@ def copy_to_s3(bucket_name, aws_access_key_id, aws_secret_access_key,
                 return key.generate_url(expires_in=0, query_auth=False,
                                         version_id=key.version_id)
         else:
-            if get_hash(key.get_contents_as_string()) == get_hash(r.content):
+            if get_hash(key.get_contents_as_string()) == \
+                    get_hash(open(dest).read()):
                 log.info("%s has the same MD5 checksum, not uploading...",
                          name)
                 return key.generate_url(expires_in=0, query_auth=False,
@@ -77,6 +98,7 @@ def main():
                         help="Balrog API root")
     parser.add_argument("-d", "--dummy", action="store_true",
                         help="Add '-dummy' suffix to branch name")
+    parser.add_argument("--signing-cert", required=True)
     parser.add_argument("-v", "--verbose", action="store_const",
                         dest="loglevel", const=logging.DEBUG,
                         default=logging.INFO)
@@ -111,12 +133,12 @@ def main():
         complete_mar_filename = complete_mar_url.split("/")[-1]
         complete_mar_dest = "{}/{}".format(dest_prefix, complete_mar_filename)
 
-        final_partial_mar_url = copy_to_s3(
+        final_partial_mar_url = verify_copy_to_s3(
             s3_bucket, aws_access_key_id, aws_secret_access_key,
-            partial_mar_url, partial_mar_dest)
-        final_complete_mar_url = copy_to_s3(
+            partial_mar_url, partial_mar_dest, args.signing_cert)
+        final_complete_mar_url = verify_copy_to_s3(
             s3_bucket, aws_access_key_id, aws_secret_access_key,
-            complete_mar_url, complete_mar_dest)
+            complete_mar_url, complete_mar_dest, args.signing_cert)
 
         partial_info = None
         complete_info = None

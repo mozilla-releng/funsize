@@ -48,7 +48,7 @@ tasks:
         createdForUser: release+funsize@mozilla.com
 
       payload:
-        image: 'rail/funsize-update-generator:v0.7'
+        image: 'rail/funsize-update-generator:v0.8'
         maxRunTime: 900
         command:
           - /runme.sh
@@ -155,6 +155,7 @@ tasks:
           PARENT_TASK_ARTIFACTS_URL_PREFIX: 'https://queue.taskcluster.net/v1/task/{{ stable_slugId("signing_task") }}/artifacts/public/env'
           BALROG_API_ROOT: {{ balrog_api_root }}
           S3_BUCKET: {{ s3_bucket }}
+          SIGNING_CERT: 'nightly'
         encryptedEnv:
           - {{ encrypt_env_var(stable_slugId("balrog_task"), now_ms,
                                now_ms + 24 * 3600 * 1000, 'BALROG_USERNAME',
