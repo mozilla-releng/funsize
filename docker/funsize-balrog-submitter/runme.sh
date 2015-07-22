@@ -12,6 +12,6 @@ python /home/worker/bin/funsize-balrog-submitter.py \
     --artifacts-url-prefix "$PARENT_TASK_ARTIFACTS_URL_PREFIX" \
     --manifest /home/worker/manifest.json \
     -a "$BALROG_API_ROOT" \
-    --dummy \
     --signing-cert "/home/worker/keys/${SIGNING_CERT}.pubkey" \
-    --verbose
+    --verbose \
+    $EXTRA_BALROG_SUBMITTER_PARAMS
