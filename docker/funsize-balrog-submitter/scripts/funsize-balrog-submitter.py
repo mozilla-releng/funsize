@@ -99,7 +99,8 @@ def main():
 
     manifest = json.load(open(args.manifest))
     auth = (balrog_username, balrog_password)
-    submitter = NightlySubmitterV4(api_root=args.api_root, auth=auth, dummy=args.dummy)
+    submitter = NightlySubmitterV4(api_root=args.api_root, auth=auth,
+                                   dummy=args.dummy)
     for entry in manifest:
         partial_mar_url = "{}/{}".format(args.artifacts_url_prefix,
                                          entry["mar"])
@@ -141,8 +142,9 @@ def main():
             productName=entry["appName"], branch=entry["branch"],
             appVersion=entry["version"], locale=entry["locale"],
             hashFunction='sha512', extVersion=entry["version"],
-            partialInfo=partial_info, completeInfo=complete_info)
-            )
+            partialInfo=partial_info, completeInfo=complete_info),
+            attempts=20, sleeptime=5, max_sleeptime=30,
+        )
 
 
 if __name__ == '__main__':

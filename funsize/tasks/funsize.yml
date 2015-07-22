@@ -147,7 +147,7 @@ tasks:
 
       payload:
         image: 'rail/funsize-balrog-submitter:v0.14'
-        maxRunTime: 600
+        maxRunTime: 900
         command:
           - /runme.sh
 
