@@ -17,7 +17,8 @@ from funsize.utils import properties_to_dict, encrypt_env_var, stable_slugId, \
 log = logging.getLogger(__name__)
 
 # TODO: move these to config
-BRANCHES = ['mozilla-central', 'mozilla-aurora']
+PRODUCTION_BRANCHES = []
+STAGING_BRANCHES = ['mozilla-central', 'mozilla-aurora']
 PLATFORMS = ['linux', 'linux64', 'win32', 'win64', 'macosx64']
 BUILDERS = [
     r'^WINNT \d+\.\d+ (x86-64 )?{branch} nightly',
@@ -76,7 +77,7 @@ class FunsizeWorker(ConsumerMixin):
         ]
         return [job.format(branch=branch, platform=platform)
                 for job in jobs
-                for branch in BRANCHES
+                for branch in PRODUCTION_BRANCHES + STAGING_BRANCHES
                 for platform in PLATFORMS]
 
     @property
@@ -221,6 +222,10 @@ class FunsizeWorker(ConsumerMixin):
         """
         template_file = os.path.join(os.path.dirname(__file__), "tasks",
                                      "funsize.yml")
+        extra_balrog_submitter_params = None
+        if branch in STAGING_BRANCHES:
+            extra_balrog_submitter_params = "--dummy"
+
         template_vars = {
             # Stable slugId
             "stable_slugId": stable_slugId(),
@@ -246,6 +251,7 @@ class FunsizeWorker(ConsumerMixin):
             "revision_hash": revision_to_revision_hash(self.th_api_root,
                                                        branch, revision),
             "update_number": update_number,
+            "extra_balrog_submitter_params": extra_balrog_submitter_params,
         }
         with open(template_file) as f:
             template = Template(f.read())
@@ -259,6 +265,7 @@ def interesting_buildername(buildername):
     :type buildername: str or unicode
     :return: boolean
     """
-    interesting_names = [n.format(branch=b) for b in BRANCHES for n in
-                         BUILDERS]
+    interesting_names = [n.format(branch=b) for b in
+                         PRODUCTION_BRANCHES + STAGING_BRANCHES
+                         for n in BUILDERS]
     return any(re.match(n, buildername) for n in interesting_names)
