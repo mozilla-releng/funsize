@@ -1,12 +1,12 @@
-from unittest import TestCase
-from funsize.worker import FunsizeWorker
+from unittest import TestCase, skipUnless
+from funsize.worker import FunsizeWorker, STAGING_BRANCHES, PRODUCTION_BRANCHES
 from funsize.balrog import BalrogClient
 import mock
 
 
 class TestFunsizeWorkerFromTemplate(TestCase):
 
-    def setUp(self):
+    def generate_task_graph(self, branch):
         balrog_client = BalrogClient("api_root",
                                      ["balrog_user", "balrog_password"])
         s3_info = {"s3_bucket": "b",
@@ -19,15 +19,35 @@ class TestFunsizeWorkerFromTemplate(TestCase):
                           balrog_worker_api_root="http://balrog/api")
         with mock.patch("funsize.worker.revision_to_revision_hash") as m:
             m.return_value = "123123"
-            self.tg = w.from_template("win32", "uk", "https://from_mar/",
-                                      "http://to_mar/s", "1234", "branch", 3)
+            tg = w.from_template("win32", "uk", "https://from_mar/",
+                                 "http://to_mar/s", "1234", branch, 3)
+            return tg
 
     def test_deps1(self):
         """Second task should require first task"""
-        self.assertEqual(self.tg["tasks"][1]["requires"][0],
-                         self.tg["tasks"][0]["taskId"])
+        tg = self.generate_task_graph("branch")
+        self.assertEqual(tg["tasks"][1]["requires"][0],
+                         tg["tasks"][0]["taskId"])
 
     def test_deps2(self):
         """Third task should require second task"""
-        self.assertEqual(self.tg["tasks"][2]["requires"][0],
-                         self.tg["tasks"][1]["taskId"])
+        tg = self.generate_task_graph("branch")
+        self.assertEqual(tg["tasks"][2]["requires"][0],
+                         tg["tasks"][1]["taskId"])
+
+    @skipUnless(STAGING_BRANCHES, "No staging branches")
+    def test_staging_branch(self):
+        branch = STAGING_BRANCHES[0]
+        tg = self.generate_task_graph(branch)
+        payload = tg["tasks"][2]["task"]["payload"]
+        self.assertEqual(
+            payload["env"]["EXTRA_BALROG_SUBMITTER_PARAMS"],
+            "--dummy"
+        )
+
+    @skipUnless(PRODUCTION_BRANCHES, "No production branches")
+    def test_production_branch(self):
+        branch = PRODUCTION_BRANCHES[0]
+        tg = self.generate_task_graph(branch)
+        payload = tg["tasks"][2]["task"]["payload"]
+        self.assertIsNone(payload["env"].get("EXTRA_BALROG_SUBMITTER_PARAMS"))

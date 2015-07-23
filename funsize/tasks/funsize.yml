@@ -156,7 +156,9 @@ tasks:
           BALROG_API_ROOT: {{ balrog_api_root }}
           S3_BUCKET: {{ s3_bucket }}
           SIGNING_CERT: 'nightly'
-          {%- if extra_balrog_submitter_params -%}EXTRA_BALROG_SUBMITTER_PARAMS: "{{ extra_balrog_submitter_params }}"{% endif %}
+          {% if extra_balrog_submitter_params %}
+          EXTRA_BALROG_SUBMITTER_PARAMS: "{{ extra_balrog_submitter_params }}"
+          {% endif %}
         encryptedEnv:
           - {{ encrypt_env_var(stable_slugId("balrog_task"), now_ms,
                                now_ms + 24 * 3600 * 1000, 'BALROG_USERNAME',
