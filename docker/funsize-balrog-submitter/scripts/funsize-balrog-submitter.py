@@ -47,7 +47,9 @@ def verify_copy_to_s3(bucket_name, aws_access_key_id, aws_secret_access_key,
     conn = S3Connection(aws_access_key_id, aws_secret_access_key)
     bucket = conn.get_bucket(bucket_name)
     _, dest = tempfile.mkstemp()
+    log.info("Downloading %s to %s...", mar_url, dest)
     download(mar_url, dest)
+    log.info("Verifying the signature...")
     verify_signature(dest, signing_cert)
     for name in possible_names(mar_dest, 10):
         log.info("Checking if %s already exists", name)
