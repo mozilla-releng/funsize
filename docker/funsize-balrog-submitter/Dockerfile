@@ -1,4 +1,4 @@
-FROM ubuntu:trusty
+FROM ubuntu:vivid
 MAINTAINER Rail Aliiev <rail@mozilla.com>
 
 # Required software
@@ -7,7 +7,7 @@ ENV DEBIAN_FRONTEND noninteractive
 # to make sure that files are removed within a single docker layer
 RUN apt-get update -q && \
     apt-get install -yyq --no-install-recommends \
-    python mercurial wget python-boto python-setuptools && \
+    python mercurial wget python-boto python-setuptools python-cryptography && \
     apt-get clean
 
 COPY requirements.txt /tmp/
