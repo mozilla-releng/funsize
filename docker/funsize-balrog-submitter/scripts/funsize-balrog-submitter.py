@@ -167,7 +167,7 @@ def main():
             appVersion=entry["version"], locale=entry["locale"],
             hashFunction='sha512', extVersion=entry["version"],
             partialInfo=partial_info, completeInfo=complete_info),
-            attempts=20, sleeptime=5, max_sleeptime=30,
+            attempts=30, sleeptime=10, max_sleeptime=60,
         )
 
 
