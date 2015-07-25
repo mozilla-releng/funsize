@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(
     os.path.dirname(__file__), "/home/worker/tools/lib/python"))
 
 from balrog.submitter.cli import NightlySubmitterV4
-from util.retry import retry
+from util.retry import retry, retriable
 
 log = logging.getLogger(__name__)
 
@@ -25,9 +25,11 @@ def get_hash(content, hash_type="md5"):
     return h.hexdigest()
 
 
+@retriable()
 def download(url, dest, mode=None):
     log.debug("Downloading %s to %s", url, dest)
     r = requests.get(url)
+    r.raise_for_status()
     with open(dest, 'wb') as fd:
         for chunk in r.iter_content(4096):
             fd.write(chunk)

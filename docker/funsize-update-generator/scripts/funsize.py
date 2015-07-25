@@ -27,9 +27,11 @@ def verify_signature(mar, signature):
     m.verify_signatures()
 
 
+@redo.retriable()
 def download(url, dest, mode=None):
     log.debug("Downloading %s to %s", url, dest)
     r = requests.get(url)
+    r.raise_for_status()
     with open(dest, 'wb') as fd:
         for chunk in r.iter_content(4096):
             fd.write(chunk)
