@@ -49,7 +49,7 @@ tasks:
 
       payload:
         image: 'rail/funsize-update-generator@sha256:ee2f95d6d2c5de2d2dfc6a04d4ed4c01c0e448bc19634ae4fb94c7361877c9b7'
-        maxRunTime: 900
+        maxRunTime: 1200
         command:
           - /runme.sh
 
