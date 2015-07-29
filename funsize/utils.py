@@ -75,7 +75,7 @@ def buildbot_to_treeherder(platform):
 
 
 def revision_to_revision_hash(th_api_root, branch, revision):
-    url = "{th_api_root}/project/{branch}/revision-lookup".format(
+    url = "{th_api_root}/project/{branch}/resultset".format(
         th_api_root=th_api_root, branch=branch
     )
     # Use short revision for treeherder API
@@ -84,9 +84,9 @@ def revision_to_revision_hash(th_api_root, branch, revision):
     for _ in redo.retrier(sleeptime=5, max_sleeptime=30):
         try:
             r = requests.get(url, params=params)
-            return r.json()[revision]["revision_hash"]
+            return r.json()["results"][0]["revision_hash"]
         except:
             pass
     else:
-        raise RuntimeError("Cannot fetch revision hash for %s %s", branch,
-                           revision)
+        raise RuntimeError("Cannot fetch revision hash for {} {}".format(
+            branch, revision))
