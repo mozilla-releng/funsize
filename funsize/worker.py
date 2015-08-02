@@ -17,8 +17,8 @@ from funsize.utils import properties_to_dict, encrypt_env_var, stable_slugId, \
 log = logging.getLogger(__name__)
 
 # TODO: move these to config
-PRODUCTION_BRANCHES = []
-STAGING_BRANCHES = ['mozilla-central', 'mozilla-aurora']
+PRODUCTION_BRANCHES = ['mozilla-central']
+STAGING_BRANCHES = ['mozilla-aurora']
 PLATFORMS = ['linux', 'linux64', 'win32', 'win64', 'macosx64']
 BUILDERS = [
     r'^WINNT \d+\.\d+ (x86-64 )?{branch} nightly',
