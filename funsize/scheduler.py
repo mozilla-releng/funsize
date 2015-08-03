@@ -71,7 +71,7 @@ def main():
 
     with Connection(hostname='pulse.mozilla.org', port=5671,
                     userid=pulse_user, password=pulse_password,
-                    virtual_host='/', ssl=True) as connection:
+                    virtual_host='/', ssl=True, heartbeat=10) as connection:
         FunsizeWorker(connection=connection, queue_name=queue_name,
                       exchange=config["pulse"]["exchange"],
                       balrog_client=balrog_client,
