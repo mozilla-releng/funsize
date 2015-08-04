@@ -2,11 +2,28 @@ import os
 import requests
 import logging
 import json
+import redo
 
 log = logging.getLogger(__name__)
 
 PLATFORM_MAP = json.load(open(
     os.path.join(os.path.dirname(__file__), 'data', 'platform_map.json')))
+
+
+def _retry_on_http_errors(url, auth, verify, params, errors):
+    for _ in redo.retrier(sleeptime=5, max_sleeptime=30, attempts=10):
+        try:
+            req = requests.get(url, auth=auth, verify=verify, params=params)
+            req.raise_for_status()
+            return req
+        except requests.HTTPError as e:
+            if e.response.status_code in errors:
+                log.exception("Got HTTP %s trying to reach %s",
+                              e.response.status_code, url)
+            else:
+                raise
+    else:
+        raise
 
 
 class BalrogClient(object):
@@ -37,9 +54,9 @@ class BalrogClient(object):
         }
 
         log.info("Connecting to %s", url)
-        req = requests.get(url, auth=self.auth, verify=self.verify,
-                           params=params)
-        req.raise_for_status()
+        req = _retry_on_http_errors(
+            url=url, auth=self.auth, verify=self.verify, params=params,
+            errors=[500])
         releases = req.json()["names"]
         releases = sorted(releases, reverse=True)
         return releases
@@ -49,6 +66,7 @@ class BalrogClient(object):
         url = "{}/releases/{}/builds/{}/{}".format(self.api_root, release,
                                                    update_platform, locale)
         log.debug("Connecting to %s", url)
-        req = requests.get(url, auth=self.auth, verify=self.verify)
-        req.raise_for_status()
+        req = _retry_on_http_errors(
+            url=url, auth=self.auth, verify=self.verify, params=None,
+            errors=[500])
         return req.json()
