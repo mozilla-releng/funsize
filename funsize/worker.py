@@ -5,14 +5,14 @@ from kombu import Exchange, Queue
 from kombu.mixins import ConsumerMixin
 import os
 import re
-from taskcluster import slugId, stringDate, fromNow
+from taskcluster import slugId, stringDate, fromNow, stableSlugId
 import yaml
 import json
 from jinja2 import Template
 import requests
 
-from funsize.utils import properties_to_dict, encrypt_env_var, stable_slugId, \
-    revision_to_revision_hash, buildbot_to_treeherder
+from funsize.utils import properties_to_dict, revision_to_revision_hash, \
+    buildbot_to_treeherder, encryptEnvVar_wrapper
 
 log = logging.getLogger(__name__)
 
@@ -227,7 +227,7 @@ class FunsizeWorker(ConsumerMixin):
 
         template_vars = {
             # Stable slugId
-            "stable_slugId": stable_slugId(),
+            "stableSlugId": stableSlugId(),
             # Now in ISO format
             "now": stringDate(datetime.datetime.utcnow()),
             # Now in ms
@@ -243,7 +243,7 @@ class FunsizeWorker(ConsumerMixin):
             "balrog_api_root": self.balrog_worker_api_root,
             "balrog_username": self.balrog_client.auth[0],
             "balrog_password": self.balrog_client.auth[1],
-            "encrypt_env_var": encrypt_env_var,
+            "encryptEnvVar": encryptEnvVar_wrapper,
             "revision": revision,
             "branch": branch,
             "treeherder_platform": buildbot_to_treeherder(platform),
