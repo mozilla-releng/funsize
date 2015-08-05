@@ -107,7 +107,8 @@ def main():
                         dest="loglevel", const=logging.DEBUG,
                         default=logging.INFO)
     args = parser.parse_args()
-    logging.basicConfig(level=args.loglevel, format="%(message)s")
+    logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s",
+                        level=args.loglevel)
     logging.getLogger("requests").setLevel(logging.WARNING)
     logging.getLogger("boto").setLevel(logging.WARNING)
 
