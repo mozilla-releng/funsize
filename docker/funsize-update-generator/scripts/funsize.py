@@ -46,7 +46,7 @@ def unpack(work_env, mar, dest_dir):
     unwrap_cmd = sh.Command(os.path.join(work_env.workdir,
                                          "unwrap_full_update.pl"))
     log.debug("Unwrapping %s", mar)
-    out = unwrap_cmd(mar, _cwd=dest_dir, _env=work_env.env, _timeout=120,
+    out = unwrap_cmd(mar, _cwd=dest_dir, _env=work_env.env, _timeout=240,
                      _err_to_out=True)
     if out:
         log.debug(out)
