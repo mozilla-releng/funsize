@@ -17,7 +17,8 @@ from mardor.marfile import MarFile
 
 log = logging.getLogger(__name__)
 ALLOWED_URL_PREFIXES = [
-    "http://download.cdn.mozilla.net/pub/mozilla.org/firefox/nightly/"
+    "http://download.cdn.mozilla.net/pub/mozilla.org/firefox/nightly/",
+    "https://mozilla-nightly-updates.s3.amazonaws.com",
 ]
 
 

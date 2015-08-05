@@ -48,7 +48,7 @@ tasks:
         createdForUser: release+funsize@mozilla.com
 
       payload:
-        image: 'rail/funsize-update-generator@sha256:ee2f95d6d2c5de2d2dfc6a04d4ed4c01c0e448bc19634ae4fb94c7361877c9b7'
+        image: 'rail/funsize-update-generator@sha256:c52bce704f196cdc7031257218b742ffe8292a8919aa321d9d95f4e332ff4cf2'
         maxRunTime: 1200
         command:
           - /runme.sh
