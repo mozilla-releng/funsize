@@ -92,6 +92,8 @@ class FunsizeWorker(ConsumerMixin):
 
     def get_consumers(self, Consumer, channel):
         """Implement parent's method called to get the list of consumers"""
+        # Set prefetch_count to 1 to avoid blocking other workers
+        channel.basic_qos(prefetch_size=0, prefetch_count=1, a_global=False)
         return [Consumer(queues=self.queues, callbacks=[self.process_message])]
 
     def process_message(self, body, message):
