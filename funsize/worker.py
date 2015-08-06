@@ -104,11 +104,12 @@ class FunsizeWorker(ConsumerMixin):
         :type message: kombu.Message
         """
         try:
-            # TODO: figure out what to do with failed tasks
-            message.ack()
             self.dispatch_message(body)
         except Exception:
             log.exception("Failed to process message")
+        finally:
+            # TODO: figure out what to do with failed tasks
+            message.ack()
 
     def on_consume_ready(self, connection, channel, consumers, **kwargs):
         """Overrides parent's stub method. Called when ready to consume pulse
