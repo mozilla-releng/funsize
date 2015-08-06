@@ -180,7 +180,7 @@ def main():
     work_env.setup()
     complete_mars = {}
     for mar_type, f in (("from", args.from_mar), ("to", args.to_mar)):
-        dest = os.path.join(work_env.workdir, f.split("/")[-1])
+        dest = os.path.join(work_env.workdir, "{}.mar".format(mar_type))
         unpack_dir = os.path.join(work_env.workdir, mar_type)
         download(f, dest)
         verify_signature(dest, args.signing_cert)

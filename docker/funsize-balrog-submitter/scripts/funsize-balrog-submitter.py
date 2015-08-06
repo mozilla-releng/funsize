@@ -135,7 +135,13 @@ def main():
         dest_prefix = "{branch}/{buildid}".format(
             branch=entry["branch"], buildid=entry["to_buildid"])
         partial_mar_dest = "{}/{}".format(dest_prefix, entry["mar"])
-        complete_mar_filename = complete_mar_url.split("/")[-1]
+        complete_mar_filename = "{appName}-{branch}-{version}-{platform}-" \
+                                "{locale}.complete.mar"
+        complete_mar_filename = complete_mar_filename.format(
+            appName=entry["appName"], branch=entry["branch"],
+            version=entry["version"], platform=entry["platform"],
+            locale=entry["locale"]
+        )
         complete_mar_dest = "{}/{}".format(dest_prefix, complete_mar_filename)
 
         final_partial_mar_url = verify_copy_to_s3(
