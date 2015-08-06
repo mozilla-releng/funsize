@@ -52,8 +52,9 @@ class BalrogClient(object):
             "name_prefix": "{}-{}-nightly-2".format(product, branch),
             "names_only": True
         }
-
-        log.info("Connecting to %s", url)
+        params_str = "&".join("=".join([k, str(v)])
+                              for k, v in params.iteritems())
+        log.info("Connecting to %s?%s", url, params_str)
         req = _retry_on_http_errors(
             url=url, auth=self.auth, verify=self.verify, params=params,
             errors=[500])
@@ -65,7 +66,7 @@ class BalrogClient(object):
         update_platform = PLATFORM_MAP[platform][0]
         url = "{}/releases/{}/builds/{}/{}".format(self.api_root, release,
                                                    update_platform, locale)
-        log.debug("Connecting to %s", url)
+        log.info("Connecting to %s", url)
         req = _retry_on_http_errors(
             url=url, auth=self.auth, verify=self.verify, params=None,
             errors=[500])
