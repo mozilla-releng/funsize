@@ -17,8 +17,8 @@ from funsize.utils import properties_to_dict, revision_to_revision_hash, \
 log = logging.getLogger(__name__)
 
 # TODO: move these to config
-PRODUCTION_BRANCHES = ['mozilla-central']
-STAGING_BRANCHES = ['mozilla-aurora']
+PRODUCTION_BRANCHES = ['mozilla-central', 'mozilla-aurora']
+STAGING_BRANCHES = []
 PLATFORMS = ['linux', 'linux64', 'win32', 'win64', 'macosx64']
 BUILDERS = [
     r'^WINNT \d+\.\d+ (x86-64 )?{branch} nightly',
