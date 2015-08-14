@@ -146,10 +146,16 @@ tasks:
         createdForUser: release+funsize@mozilla.com
 
       payload:
-        image: 'rail/funsize-balrog-submitter@sha256:9dde6cea3fb2a80b9a50397111d5cc0a8108fcbf914289490800685bc908c3de'
+        image: 'rail/funsize-balrog-submitter@sha256:96225ed88e32695d1cb0b142758b8be36b14e47e560983312fee7e2a7d38e9fe'
         maxRunTime: 1800
         command:
           - /runme.sh
+
+        artifacts:
+          'public/env':
+            path: /home/worker/artifacts/
+            type: directory
+            expires: '{{ fromNow("7 days") }}'
 
         env:
           PARENT_TASK_ARTIFACTS_URL_PREFIX: 'https://queue.taskcluster.net/v1/task/{{ stableSlugId("signing_task") }}/artifacts/public/env'
