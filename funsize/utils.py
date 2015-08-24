@@ -1,7 +1,10 @@
 import os
 import requests
 import redo
+import logging
 from taskcluster import encryptEnvVar
+
+log = logging.getLogger(__name__)
 
 
 def properties_to_dict(props):
@@ -33,11 +36,14 @@ def revision_to_revision_hash(th_api_root, branch, revision):
     revision = revision[:12]
     params = {"revision": revision}
     for _ in redo.retrier(sleeptime=5, max_sleeptime=30):
+        params_str = "&".join("=".join([k, str(v)])
+                              for k, v in params.iteritems())
         try:
+            log.debug("Connecting to %s?%s", url, params_str)
             r = requests.get(url, params=params)
             return r.json()["results"][0]["revision_hash"]
         except:
-            pass
+            log.exception("Failed to connect to %s?%s", url, params_str)
     else:
         raise RuntimeError("Cannot fetch revision hash for {} {}".format(
             branch, revision))
