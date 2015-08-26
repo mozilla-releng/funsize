@@ -8,7 +8,7 @@ import re
 from taskcluster import slugId, stringDate, fromNow, stableSlugId
 import yaml
 import json
-from jinja2 import Template
+from jinja2 import Template, StrictUndefined
 import requests
 
 from funsize.utils import properties_to_dict, revision_to_revision_hash, \
@@ -133,38 +133,35 @@ class FunsizeWorker(ConsumerMixin):
             log.debug("Ignoring %s with result %s", buildername, job_result)
             return
         properties = properties_to_dict(payload["build"]["properties"])
+        # try to guess chunk number, last digit in the buildername
+        try:
+            chunk_name = int(buildername.split("-")[-1])
+        except ValueError:
+            # undefined (en-US) use 0
+            chunk_name = "en-US"
+
         if "locales" in properties:
             log.debug("L10N repack detected")
             funsize_info = json.loads(properties["funsize_info"])
             locales = json.loads(properties["locales"])
+            locales = [locale for locale, result in locales.iteritems()
+                       if result.lower() == "success"]
             platform = funsize_info["platform"]
             branch = funsize_info["branch"]
             product = funsize_info["appName"]
-            for locale, result in locales.iteritems():
-                if result.lower() == "success":
-                    self.create_partial(
-                        product=product, branch=branch, platform=platform,
-                        locale=locale, revision=properties["revision"])
-                else:
-                    log.warn("Ignoring %s with result %s", locale, result)
-        elif "locale" in properties:
-            # Old-style buildbotcustom l10n repacks
-            # TODO: this branch can be removed when we switch to mozharness
-            #  based l10n repacks for TB and ESRs
-            log.debug("Single locale repack detected (%s)",
-                      properties["locale"])
-            self.create_partial(
-                product=properties["appName"], branch=properties["branch"],
-                platform=properties["platform"], locale=properties["locale"],
-                revision=properties["fx_revision"])
+            self.create_partials(
+                product=product, branch=branch, platform=platform,
+                locales=locales, revision=properties["revision"],
+                chunk_name=chunk_name)
         else:
             log.debug("en-US build detected")
-            self.create_partial(
+            self.create_partials(
                 product=properties["appName"], branch=properties["branch"],
-                platform=properties["platform"], locale='en-US',
-                revision=properties["revision"])
+                platform=properties["platform"], locales=['en-US'],
+                revision=properties["revision"], chunk_name=chunk_name)
 
-    def create_partial(self, product, branch, platform, locale, revision):
+    def create_partials(self, product, branch, platform, locales, revision,
+                        chunk_name=1):
         """Calculates "from" and "to" MAR URLs and calls  create_task_graph().
         Currently "from" MAR is 2 releases behind to avoid duplication of
         existing CI partials.
@@ -172,48 +169,63 @@ class FunsizeWorker(ConsumerMixin):
         :param product: capitalized product name, AKA appName, e.g. Firefox
         :param branch: branch name (mozilla-central)
         :param platform: buildbot platform (linux, macosx64)
-        :param locale: en-US or locale
+        :param locales: list of locales
+        :param revision: revision of the "to" build
+        :param chunk_name: chunk name
         """
         # TODO: move limit to config
         # Get last 5 releases (including current),
         # generate partial for 4 latest
         last_releases = self.balrog_client.get_releases(product, branch)[:5]
         release_to = last_releases.pop(0)
-        for update_number, release_from in enumerate(last_releases):
+        for update_number, release_from in enumerate(last_releases, start=1):
             log.debug("From: %s", release_from)
             log.debug("To: %s", release_to)
-            try:
-                build_from = self.balrog_client.get_build(release_from,
-                                                          platform, locale)
-                log.debug("Build from: %s", build_from)
-                build_to = self.balrog_client.get_build(release_to, platform,
-                                                        locale)
-                log.debug("Build to: %s", build_to)
-                from_mar = build_from["completes"][0]["fileUrl"]
-                to_mar = build_to["completes"][0]["fileUrl"]
-                log.info("New Funsize task for %s %s, from %s to %s", platform,
-                         locale, from_mar, to_mar)
-                self.submit_task_graph(
-                    platform=platform, locale=locale, from_mar=from_mar,
-                    to_mar=to_mar, revision=revision, branch=branch,
-                    update_number=update_number + 1)
-            except (requests.HTTPError, ValueError):
-                log.exception("Error getting build, skipping this scenario")
+            extra = []
+            for locale in locales:
+                try:
+                    build_from = self.balrog_client.get_build(
+                        release_from, platform, locale)
+                    log.debug("Build from: %s", build_from)
+                    build_to = self.balrog_client.get_build(
+                        release_to, platform, locale)
+                    log.debug("Build to: %s", build_to)
+                    from_mar = build_from["completes"][0]["fileUrl"]
+                    to_mar = build_to["completes"][0]["fileUrl"]
+                    extra.append({
+                        "locale": locale,
+                        "from_mar": from_mar,
+                        "to_mar": to_mar,
+                    })
+                except (requests.HTTPError, ValueError):
+                    log.exception(
+                        "Error getting build, skipping this scenario")
 
-    def submit_task_graph(self, platform, locale, from_mar, to_mar, revision,
-                          branch, update_number):
+            if extra:
+                all_locales = [e["locale"] for e in extra]
+                log.info("New Funsize task for %s", all_locales)
+                self.submit_task_graph(
+                    branch=branch, revision=revision, platform=platform,
+                    update_number=update_number, chunk_name=chunk_name,
+                    extra=extra)
+            else:
+                log.warn("Nothing to submit")
+
+    def submit_task_graph(self, branch, revision, platform, update_number,
+                          chunk_name, extra):
         graph_id = slugId()
         log.info("Submitting a new graph %s", graph_id)
+
         task_graph = self.from_template(
-            platform=platform, locale=locale, from_mar=from_mar, to_mar=to_mar,
-            revision=revision, branch=branch, update_number=update_number)
+            extra=extra, update_number=update_number, platform=platform,
+            chunk_name=chunk_name, revision=revision, branch=branch)
         log.debug("Graph definition: %s", task_graph)
         res = self.scheduler.createTaskGraph(graph_id, task_graph)
         log.info("Result was: %s", res)
         return graph_id
 
-    def from_template(self, platform, locale, from_mar, to_mar, revision,
-                      branch, update_number):
+    def from_template(self, platform, revision, branch, update_number,
+                      chunk_name, extra):
         """Reads and populates graph template.
 
         :param platform: buildbot platform (linux, macosx64)
@@ -237,9 +249,6 @@ class FunsizeWorker(ConsumerMixin):
             "now_ms": time.time() * 1000,
             "fromNow": fromNow,
             "platform": platform,
-            "locale": locale,
-            "from_MAR": from_mar,
-            "to_MAR": to_mar,
             "s3_bucket": self.s3_info["s3_bucket"],
             "aws_access_key_id": self.s3_info["aws_access_key_id"],
             "aws_secret_access_key": self.s3_info["aws_secret_access_key"],
@@ -254,9 +263,11 @@ class FunsizeWorker(ConsumerMixin):
                                                        branch, revision),
             "update_number": update_number,
             "extra_balrog_submitter_params": extra_balrog_submitter_params,
+            "extra": extra,
+            "chunk_name": chunk_name,
         }
         with open(template_file) as f:
-            template = Template(f.read())
+            template = Template(f.read(), undefined=StrictUndefined)
         rendered = template.render(**template_vars)
         return yaml.safe_load(rendered)
 

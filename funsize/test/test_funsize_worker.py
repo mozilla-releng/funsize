@@ -19,8 +19,13 @@ class TestFunsizeWorkerFromTemplate(TestCase):
                           balrog_worker_api_root="http://balrog/api")
         with mock.patch("funsize.worker.revision_to_revision_hash") as m:
             m.return_value = "123123"
-            tg = w.from_template("win32", "uk", "https://from_mar/",
-                                 "http://to_mar/s", "1234", branch, 3)
+            extra = [
+                {"locale": "en-CA", "from_mar": "https://from/mar",
+                 "to_mar": "https://to/mar"}
+            ]
+            tg = w.from_template(
+                platform="win32", revision="1234", branch=branch,
+                update_number=1, chunk_name=1, extra=extra)
             return tg
 
     def test_deps1(self):

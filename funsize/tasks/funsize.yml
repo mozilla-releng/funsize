@@ -20,20 +20,33 @@ tasks:
       metadata:
         owner: release+funsize@mozilla.com
         source: https://github.com/mozilla/funsize
-        name: "[funsize] Update generating task"
+        # Treeherder hashes the names and may override groupSymbol if the
+        # name matches other similar task with different update number
+        name: "[funsize] Update generating task (today-{{ update_number }})"
         description: |
           This task generates MAR files and publishes unsigned bits.
 
       routes:
         - tc-treeherder-stage.{{ branch }}.{{ revision_hash }}
-        - index.funsize.v1.{{ branch }}.revision.{{ platform }}.{{ revision }}.{{ locale }}.{{ update_number }}.updates
-        - index.funsize.v1.{{ branch }}.latest.{{ platform }}.{{ locale }}.{{ update_number }}.updates
+        - index.funsize.v1.{{ branch }}.revision.{{ platform }}.{{ revision }}.{{ update_number }}.{{ chunk_name }}.updates
+        - index.funsize.v1.{{ branch }}.latest.{{ platform }}.{{ update_number }}.{{ chunk_name }}.updates
       extra:
+        funsize:
+          partials:
+          {% for e in extra %}
+            -
+              locale: {{ e.locale }}
+              from_mar: "{{ e.from_mar }}"
+              to_mar: "{{ e.to_mar }}"
+              platform: {{ platform }}
+              branch: {{ branch }}
+              update_number: {{ update_number }}
+          {% endfor %}
         treeherderEnv:
           - staging
         treeherder:
-          symbol: {{ locale }}-{{ update_number }}-1
-          groupSymbol: Update
+          symbol: {{ chunk_name }}g
+          groupSymbol: Update-{{ update_number }}
           collection:
             opt: true
           machine:
@@ -48,16 +61,12 @@ tasks:
         createdForUser: release+funsize@mozilla.com
 
       payload:
-        image: 'rail/funsize-update-generator@sha256:79943317701708bddd7cca07875b044689c35cbe689148662ea778df8b47dda8'
-        maxRunTime: 1200
+        image: 'rail/funsize-update-generator@sha256:fa23730b1148e2a6dd4eddb0e579c366d2439d1007ef00ec31bbc9353907c045'
+        maxRunTime: 7200
         command:
           - /runme.sh
 
         env:
-          FROM_MAR: '{{ from_MAR }}'
-          TO_MAR: '{{ to_MAR }}'
-          PLATFORM: '{{ platform }}'
-          LOCALE: '{{ locale }}'
           SIGNING_CERT: 'nightly'
 
         artifacts:
@@ -75,20 +84,20 @@ tasks:
       metadata:
         owner: release+funsize@mozilla.com
         source: https://github.com/mozilla/funsize
-        name: "[funsize] MAR signing task"
+        name: "[funsize] MAR signing task (today-{{ update_number }})"
         description: |
           This task signs MAR files and publishes signed bits.
 
       routes:
         - tc-treeherder-stage.{{ branch }}.{{ revision_hash }}
-        - index.funsize.v1.{{ branch }}.revision.{{ platform }}.{{ revision }}.{{ locale }}.{{ update_number }}.signing
-        - index.funsize.v1.{{ branch }}.latest.{{ platform }}.{{ locale }}.{{ update_number }}.signing
+        - index.funsize.v1.{{ branch }}.revision.{{ platform }}.{{ revision }}.{{ update_number }}.{{ chunk_name }}.signing
+        - index.funsize.v1.{{ branch }}.latest.{{ platform }}.{{ update_number }}.{{ chunk_name }}.signing
       extra:
         treeherderEnv:
           - staging
         treeherder:
-          symbol: {{ locale }}-{{ update_number }}-2
-          groupSymbol: Update
+          symbol: {{ chunk_name }}s
+          groupSymbol: Update-{{ update_number }}
           collection:
             opt: true
           machine:
@@ -116,14 +125,14 @@ tasks:
       deadline: '{{ fromNow("24 hours") }}'
       routes:
         - tc-treeherder-stage.{{ branch }}.{{ revision_hash }}
-        - index.funsize.v1.{{ branch }}.revision.{{ platform }}.{{ revision }}.{{ locale }}.{{ update_number }}.balrog
-        - index.funsize.v1.{{ branch }}.latest.{{ platform }}.{{ locale }}.{{ update_number }}.balrog
+        - index.funsize.v1.{{ branch }}.revision.{{ platform }}.{{ revision }}.{{ update_number }}.{{ chunk_name }}.balrog
+        - index.funsize.v1.{{ branch }}.latest.{{ platform }}.{{ update_number }}.{{ chunk_name }}.balrog
       extra:
         treeherderEnv:
           - staging
         treeherder:
-          symbol: {{ locale }}-{{ update_number }}-3
-          groupSymbol: Update
+          symbol: {{ chunk_name }}u
+          groupSymbol: Update-{{ update_number }}
           collection:
             opt: true
           machine:
@@ -134,7 +143,7 @@ tasks:
       metadata:
         owner: release+funsize@mozilla.com
         source: https://github.com/mozilla/funsize
-        name: "[funsize] Publish to Balrog"
+        name: "[funsize] Publish to Balrog (today-{{ update_number }})"
         description: |
           This task publishes signed updates to Balrog.
 
@@ -147,7 +156,7 @@ tasks:
 
       payload:
         image: 'rail/funsize-balrog-submitter@sha256:96225ed88e32695d1cb0b142758b8be36b14e47e560983312fee7e2a7d38e9fe'
-        maxRunTime: 1800
+        maxRunTime: 3600
         command:
           - /runme.sh
 
