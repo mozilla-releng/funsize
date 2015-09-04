@@ -10,6 +10,8 @@ import yaml
 import json
 from jinja2 import Template, StrictUndefined
 import requests
+from more_itertools import chunked
+
 
 from funsize.utils import properties_to_dict, revision_to_revision_hash, \
     buildbot_to_treeherder, encryptEnvVar_wrapper
@@ -178,54 +180,63 @@ class FunsizeWorker(ConsumerMixin):
         # generate partial for 4 latest
         last_releases = self.balrog_client.get_releases(product, branch)[:5]
         release_to = last_releases.pop(0)
+        per_chunk = 5
         for update_number, release_from in enumerate(last_releases, start=1):
             log.debug("From: %s", release_from)
             log.debug("To: %s", release_to)
             extra = []
-            for locale in locales:
-                try:
-                    build_from = self.balrog_client.get_build(
-                        release_from, platform, locale)
-                    log.debug("Build from: %s", build_from)
-                    build_to = self.balrog_client.get_build(
-                        release_to, platform, locale)
-                    log.debug("Build to: %s", build_to)
-                    from_mar = build_from["completes"][0]["fileUrl"]
-                    to_mar = build_to["completes"][0]["fileUrl"]
-                    extra.append({
-                        "locale": locale,
-                        "from_mar": from_mar,
-                        "to_mar": to_mar,
-                    })
-                except (requests.HTTPError, ValueError):
-                    log.exception(
-                        "Error getting build, skipping this scenario")
+            for n, chunk in enumerate(chunked(locales, per_chunk), start=1):
+                for locale in chunk:
+                    try:
+                        build_from = self.balrog_client.get_build(
+                            release_from, platform, locale)
+                        log.debug("Build from: %s", build_from)
+                        build_to = self.balrog_client.get_build(
+                            release_to, platform, locale)
+                        log.debug("Build to: %s", build_to)
+                        from_mar = build_from["completes"][0]["fileUrl"]
+                        to_mar = build_to["completes"][0]["fileUrl"]
+                        extra.append({
+                            "locale": locale,
+                            "from_mar": from_mar,
+                            "to_mar": to_mar,
+                        })
+                    except (requests.HTTPError, ValueError):
+                        log.exception(
+                            "Error getting build, skipping this scenario")
 
-            if extra:
-                all_locales = [e["locale"] for e in extra]
-                log.info("New Funsize task for %s", all_locales)
-                self.submit_task_graph(
-                    branch=branch, revision=revision, platform=platform,
-                    update_number=update_number, chunk_name=chunk_name,
-                    extra=extra)
-            else:
-                log.warn("Nothing to submit")
+                if extra:
+                    if len(locales) > per_chunk:
+                        # More than 1 chunk
+                        subchunk = n
+                    else:
+                        subchunk = None
+
+                    all_locales = [e["locale"] for e in extra]
+                    log.info("New Funsize task for %s", all_locales)
+                    self.submit_task_graph(
+                        branch=branch, revision=revision, platform=platform,
+                        update_number=update_number, chunk_name=chunk_name,
+                        extra=extra, subchunk=subchunk)
+                else:
+                    log.warn("Nothing to submit")
 
     def submit_task_graph(self, branch, revision, platform, update_number,
-                          chunk_name, extra):
+                          chunk_name, subchunk, extra):
         graph_id = slugId()
         log.info("Submitting a new graph %s", graph_id)
 
         task_graph = self.from_template(
             extra=extra, update_number=update_number, platform=platform,
-            chunk_name=chunk_name, revision=revision, branch=branch)
+            chunk_name=chunk_name, subchunk=subchunk, revision=revision,
+            branch=branch)
         log.debug("Graph definition: %s", task_graph)
         res = self.scheduler.createTaskGraph(graph_id, task_graph)
         log.info("Result was: %s", res)
         return graph_id
 
     def from_template(self, platform, revision, branch, update_number,
-                      chunk_name, extra):
+                      chunk_name, subchunk, extra):
         """Reads and populates graph template.
 
         :param platform: buildbot platform (linux, macosx64)
@@ -265,6 +276,7 @@ class FunsizeWorker(ConsumerMixin):
             "extra_balrog_submitter_params": extra_balrog_submitter_params,
             "extra": extra,
             "chunk_name": chunk_name,
+            "subchunk": subchunk,
         }
         with open(template_file) as f:
             template = Template(f.read(), undefined=StrictUndefined)

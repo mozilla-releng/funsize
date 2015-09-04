@@ -6,7 +6,7 @@ import mock
 
 class TestFunsizeWorkerFromTemplate(TestCase):
 
-    def generate_task_graph(self, branch):
+    def generate_task_graph(self, branch, subchunk=None):
         balrog_client = BalrogClient("api_root",
                                      ["balrog_user", "balrog_password"])
         s3_info = {"s3_bucket": "b",
@@ -25,7 +25,7 @@ class TestFunsizeWorkerFromTemplate(TestCase):
             ]
             tg = w.from_template(
                 platform="win32", revision="1234", branch=branch,
-                update_number=1, chunk_name=1, extra=extra)
+                update_number=1, chunk_name=1, extra=extra, subchunk=subchunk)
             return tg
 
     def test_deps1(self):
@@ -56,3 +56,13 @@ class TestFunsizeWorkerFromTemplate(TestCase):
         tg = self.generate_task_graph(branch)
         payload = tg["tasks"][2]["task"]["payload"]
         self.assertIsNone(payload["env"].get("EXTRA_BALROG_SUBMITTER_PARAMS"))
+
+    def test_subchunk_None(self):
+        tg = self.generate_task_graph("branch")
+        symbol = tg["tasks"][1]["task"]["extra"]["treeherder"]["symbol"]
+        self.assertEqual(symbol, "1s")
+
+    def test_subchunk_not_None(self):
+        tg = self.generate_task_graph("branch", 2)
+        symbol = tg["tasks"][1]["task"]["extra"]["treeherder"]["symbol"]
+        self.assertEqual(symbol, "1.2s")

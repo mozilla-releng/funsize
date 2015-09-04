@@ -23,6 +23,7 @@ setup(
         "cryptography==0.6",
         "enum34",
         "kombu",
+        "more_itertools",
         "PGPy",
         "pycparser",
         "PyHawk-with-a-single-extra-commit",
