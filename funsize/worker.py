@@ -184,8 +184,8 @@ class FunsizeWorker(ConsumerMixin):
         for update_number, release_from in enumerate(last_releases, start=1):
             log.debug("From: %s", release_from)
             log.debug("To: %s", release_to)
-            extra = []
             for n, chunk in enumerate(chunked(locales, per_chunk), start=1):
+                extra = []
                 for locale in chunk:
                     try:
                         build_from = self.balrog_client.get_build(
