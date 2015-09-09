@@ -211,8 +211,9 @@ def main():
             "to_mar": e["to_mar"],
             "platform": e["platform"],
             "locale": e["locale"],
-            "update_number": e["update_number"],
         }
+        if "update_number" in e:
+            mar_data["update_number"] = e["update_number"]
         if "previousVersion" in e:
             mar_data["previousVersion"] = e["previousVersion"]
         if "previousBuildNumber" in e:
