@@ -34,7 +34,7 @@ setup(
         "requests==2.4.3",
         "singledispatch",
         "six",
-        "taskcluster>=0.0.24",
+        "taskcluster>=0.0.26",
         "wsgiref",
     ],
     tests_require=[
