@@ -113,7 +113,6 @@ tasks:
       provisionerId: "signing-provisioner-v1"
       scopes:
         - signing:cert:nightly-signing
-        - signing:format:gpg
         - signing:format:mar
       tags:
         createdForUser: release+funsize@mozilla.com
