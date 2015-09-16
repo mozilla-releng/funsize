@@ -13,7 +13,7 @@ from mardor.marfile import MarFile
 sys.path.insert(0, os.path.join(
     os.path.dirname(__file__), "/home/worker/tools/lib/python"))
 
-from balrog.submitter.cli import NightlySubmitterV4
+from balrog.submitter.cli import NightlySubmitterV4, ReleaseSubmitterV4
 from util.retry import retry, retriable
 
 log = logging.getLogger(__name__)
@@ -122,63 +122,75 @@ def main():
     aws_access_key_id = os.environ.get("AWS_ACCESS_KEY_ID")
     aws_secret_access_key = os.environ.get("AWS_SECRET_ACCESS_KEY")
     if not (s3_bucket and aws_access_key_id and aws_secret_access_key):
-        raise RuntimeError("Define AWS bucket and credentials")
+        log.warn("Skipping S3 uploads...")
+        uploads_enabled = False
+    else:
+        uploads_enabled = True
 
     manifest = json.load(open(args.manifest))
     auth = (balrog_username, balrog_password)
-    submitter = NightlySubmitterV4(api_root=args.api_root, auth=auth,
-                                   dummy=args.dummy)
-    for entry in manifest:
-        partial_mar_url = "{}/{}".format(args.artifacts_url_prefix,
-                                         entry["mar"])
-        complete_mar_url = entry["to_mar"]
-        dest_prefix = "{branch}/{buildid}".format(
-            branch=entry["branch"], buildid=entry["to_buildid"])
-        partial_mar_dest = "{}/{}".format(dest_prefix, entry["mar"])
-        complete_mar_filename = "{appName}-{branch}-{version}-{platform}-" \
-                                "{locale}.complete.mar"
-        complete_mar_filename = complete_mar_filename.format(
-            appName=entry["appName"], branch=entry["branch"],
-            version=entry["version"], platform=entry["platform"],
-            locale=entry["locale"]
-        )
-        complete_mar_dest = "{}/{}".format(dest_prefix, complete_mar_filename)
 
-        final_partial_mar_url = verify_copy_to_s3(
-            s3_bucket, aws_access_key_id, aws_secret_access_key,
-            partial_mar_url, partial_mar_dest, args.signing_cert)
-        final_complete_mar_url = verify_copy_to_s3(
-            s3_bucket, aws_access_key_id, aws_secret_access_key,
-            complete_mar_url, complete_mar_dest, args.signing_cert)
+    for e in manifest:
+        complete_info = [{
+            "hash": e["to_hash"],
+            "size": e["to_size"],
+        }]
+        partial_info = [{
+            "hash": e["hash"],
+            "size": e["size"],
+        }]
 
-        partial_info = None
-        complete_info = None
-
-        partial_info = [
-            {
-                "url": final_partial_mar_url,
-                "hash": entry["hash"],
-                "from_buildid": entry["from_buildid"],
-                "size": entry["size"],
-            }
-        ]
-        complete_info = [
-            {
-                "url": final_complete_mar_url,
-                "hash": entry["to_hash"],
-                "size": entry["to_size"],
-            }
-        ]
-
-        retry(lambda: submitter.run(
-            platform=entry["platform"], buildID=entry["to_buildid"],
-            productName=entry["appName"], branch=entry["branch"],
-            appVersion=entry["version"], locale=entry["locale"],
-            hashFunction='sha512', extVersion=entry["version"],
-            partialInfo=partial_info, completeInfo=complete_info),
-            attempts=30, sleeptime=10, max_sleeptime=60,
-        )
-
+        if "previousVersion" in e and "previousBuildNumber" in e:
+            log.info("Release style balrog submission")
+            partial_info[0]["previousVersion"] = e["previousVersion"]
+            partial_info[0]["previousBuildNumber"] = e["previousBuildNumber"]
+            submitter = ReleaseSubmitterV4(api_root=args.api_root, auth=auth,
+                                           dummy=args.dummy)
+            retry(lambda: submitter.run(
+                platform=e["platform"], productName=e["appName"],
+                version=e["toVersion"],
+                build_number=e["toBuildNumber"],
+                appVersion=e["toVersion"], extVersion=e["toVersion"],
+                buildID=e["to_buildid"], locale=e["locale"],
+                hashFunction='sha512',
+                partialInfo=partial_info, completeInfo=complete_info,
+            ))
+        elif "from_buildid" in e and uploads_enabled:
+            log.info("Nightly style balrog submission")
+            partial_mar_url = "{}/{}".format(args.artifacts_url_prefix,
+                                             e["mar"])
+            complete_mar_url = e["to_mar"]
+            dest_prefix = "{branch}/{buildid}".format(
+                branch=e["branch"], buildid=e["to_buildid"])
+            partial_mar_dest = "{}/{}".format(dest_prefix, e["mar"])
+            complete_mar_filename = "{appName}-{branch}-{version}-" \
+                                    "{platform}-{locale}.complete.mar"
+            complete_mar_filename = complete_mar_filename.format(
+                appName=e["appName"], branch=e["branch"],
+                version=e["version"], platform=e["platform"],
+                locale=e["locale"]
+            )
+            complete_mar_dest = "{}/{}".format(dest_prefix,
+                                               complete_mar_filename)
+            partial_info[0]["url"] = verify_copy_to_s3(
+                s3_bucket, aws_access_key_id, aws_secret_access_key,
+                partial_mar_url, partial_mar_dest, args.signing_cert)
+            complete_info[0]["url"] = verify_copy_to_s3(
+                s3_bucket, aws_access_key_id, aws_secret_access_key,
+                complete_mar_url, complete_mar_dest, args.signing_cert)
+            partial_info[0]["from_buildid"] = e["from_buildid"]
+            submitter = NightlySubmitterV4(api_root=args.api_root, auth=auth,
+                                           dummy=args.dummy)
+            retry(lambda: submitter.run(
+                platform=e["platform"], buildID=e["to_buildid"],
+                productName=e["appName"], branch=e["branch"],
+                appVersion=e["version"], locale=e["locale"],
+                hashFunction='sha512', extVersion=e["version"],
+                partialInfo=partial_info, completeInfo=complete_info),
+                attempts=30, sleeptime=10, max_sleeptime=60,
+            )
+        else:
+            raise RuntimeError("Cannot determine Balrog submission style")
 
 if __name__ == '__main__':
     main()

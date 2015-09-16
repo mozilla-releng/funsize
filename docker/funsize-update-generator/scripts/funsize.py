@@ -212,12 +212,11 @@ def main():
             "platform": e["platform"],
             "locale": e["locale"],
         }
-        if "update_number" in e:
-            mar_data["update_number"] = e["update_number"]
-        if "previousVersion" in e:
-            mar_data["previousVersion"] = e["previousVersion"]
-        if "previousBuildNumber" in e:
-            mar_data["previousBuildNumber"] = e["previousBuildNumber"]
+        for field in ("update_number", "previousVersion",
+                      "previousBuildNumber", "toVersion",
+                      "toBuildNumber"):
+            if field in e:
+                mar_data[field] = e[field]
         mar_data.update(complete_mars)
         # if branch not set explicitly use repo-name
         mar_data["branch"] = e.get("branch",
