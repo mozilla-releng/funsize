@@ -22,6 +22,7 @@ ALLOWED_URL_PREFIXES = [
     "https://mozilla-nightly-updates.s3.amazonaws.com",
     "https://queue.taskcluster.net/",
     "http://ftp.mozilla.org/",
+    "http://download.mozilla.org/",
 ]
 
 
