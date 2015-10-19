@@ -147,7 +147,8 @@ class FunsizeWorker(ConsumerMixin):
             funsize_info = json.loads(properties["funsize_info"])
             locales = json.loads(properties["locales"])
             locales = [locale for locale, result in locales.iteritems()
-                       if result.lower() == "success"]
+                       if str(result).lower() == "success" or
+                       str(result) == '0']
             platform = funsize_info["platform"]
             branch = funsize_info["branch"]
             product = funsize_info["appName"]
