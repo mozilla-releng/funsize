@@ -182,7 +182,8 @@ def main():
             dest = os.path.join(work_env.workdir, "{}.mar".format(mar_type))
             unpack_dir = os.path.join(work_env.workdir, mar_type)
             download(f, dest)
-            verify_signature(dest, args.signing_cert)
+            if not os.getenv("MOZ_DISABLE_MAR_CERT_VERIFICATION"):
+                verify_signature(dest, args.signing_cert)
             complete_mars["%s_size" % mar_type] = os.path.getsize(dest)
             complete_mars["%s_hash" % mar_type] = get_hash(dest)
             unpack(work_env, dest, unpack_dir)
