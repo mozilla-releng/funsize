@@ -280,7 +280,8 @@ class FunsizeWorker(ConsumerMixin):
             "extra": extra,
             "chunk_name": chunk_name,
             "subchunk": subchunk,
-            "sign_task": lambda t: sign_task(t, pvt_key=self.pvt_key),
+            "sign_task": lambda t: sign_task(t, pvt_key=self.pvt_key,
+                                             valid_for=24 * 3600),
         }
         with open(template_file) as f:
             template = Template(f.read(), undefined=StrictUndefined)

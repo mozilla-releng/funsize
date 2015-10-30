@@ -60,12 +60,12 @@ def encryptEnvVar_wrapper(*args, **kwargs):
         **kwargs)
 
 
-def sign_task(task_id, pvt_key, algorithm=ALGORITHMS.RS512):
+def sign_task(task_id, pvt_key, valid_for=3600, algorithm=ALGORITHMS.RS512):
     # reserved JWT claims, to be verified
     # Issued At
     iat = int(time.time())
-    # Expiration Time, + 1 week
-    exp = iat + 7 * 24 * 3600
+    # Expiration Time
+    exp = iat + valid_for
     claims = {
         "iat": iat,
         "exp": exp,
