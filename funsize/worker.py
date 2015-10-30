@@ -11,6 +11,7 @@ import json
 from jinja2 import Template, StrictUndefined
 import requests
 from more_itertools import chunked
+from functools import partial
 
 
 from funsize.utils import properties_to_dict, revision_to_revision_hash, \
@@ -280,8 +281,7 @@ class FunsizeWorker(ConsumerMixin):
             "extra": extra,
             "chunk_name": chunk_name,
             "subchunk": subchunk,
-            "sign_task": lambda t: sign_task(t, pvt_key=self.pvt_key,
-                                             valid_for=24 * 3600),
+            "sign_task": partial(sign_task, pvt_key=self.pvt_key),
         }
         with open(template_file) as f:
             template = Template(f.read(), undefined=StrictUndefined)
