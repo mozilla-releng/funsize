@@ -1,5 +1,4 @@
 from unittest import TestCase
-import os
 from jose import jwt, jws
 from jose.constants import ALGORITHMS
 from funsize.utils import properties_to_dict, sign_task
