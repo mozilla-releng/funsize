@@ -14,7 +14,7 @@ from more_itertools import chunked
 
 
 from funsize.utils import properties_to_dict, revision_to_revision_hash, \
-    buildbot_to_treeherder, encryptEnvVar_wrapper
+    buildbot_to_treeherder, encryptEnvVar_wrapper, sign_task
 
 log = logging.getLogger(__name__)
 
@@ -34,7 +34,8 @@ BUILDERS = [
 class FunsizeWorker(ConsumerMixin):
 
     def __init__(self, connection, queue_name, exchange, balrog_client,
-                 scheduler, s3_info, th_api_root, balrog_worker_api_root):
+                 scheduler, s3_info, th_api_root, balrog_worker_api_root,
+                 pvt_key):
         """Funsize consumer worker
         :type connection: kombu.Connection
         :param queue_name: Full queue name, including queue/<user> prefix
@@ -51,6 +52,7 @@ class FunsizeWorker(ConsumerMixin):
         self.s3_info = s3_info
         self.th_api_root = th_api_root
         self.balrog_worker_api_root = balrog_worker_api_root
+        self.pvt_key = pvt_key
 
     @property
     def routing_keys(self):
@@ -278,6 +280,7 @@ class FunsizeWorker(ConsumerMixin):
             "extra": extra,
             "chunk_name": chunk_name,
             "subchunk": subchunk,
+            "sign_task": lambda t: sign_task(t, pvt_key=self.pvt_key),
         }
         with open(template_file) as f:
             template = Template(f.read(), undefined=StrictUndefined)

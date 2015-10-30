@@ -68,6 +68,8 @@ def main():
     cert = config["balrog"].get("cert")
     balrog_client = BalrogClient(api_root=api_root, auth=auth, cert=cert)
     scheduler = taskcluster.Scheduler(tc_opts)
+    with open(config["signing"]["pvt_key"]) as f:
+        pvt_key = f.read()
 
     with Connection(hostname='pulse.mozilla.org', port=5671,
                     userid=pulse_user, password=pulse_password,
@@ -77,7 +79,8 @@ def main():
                       balrog_client=balrog_client,
                       scheduler=scheduler, s3_info=s3_info,
                       th_api_root=th_api_root,
-                      balrog_worker_api_root=balrog_worker_api_root).run()
+                      balrog_worker_api_root=balrog_worker_api_root,
+                      pvt_key=pvt_key).run()
 
 
 if __name__ == '__main__':

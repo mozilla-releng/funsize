@@ -96,6 +96,8 @@ tasks:
         - index.funsize.v1.{{ branch }}.revision.{{ platform }}.{{ revision }}.{{ update_number }}.{{ chunk_name }}{% if subchunk %}_{{ subchunk }}{% endif %}.signing
         - index.funsize.v1.{{ branch }}.latest.{{ platform }}.{{ update_number }}.{{ chunk_name }}{% if subchunk %}_{{ subchunk }}{% endif %}.signing
       extra:
+        signing:
+          signature: {{ sign_task(stableSlugId("signing_task")) }}
         treeherderEnv:
           - staging
           - production
