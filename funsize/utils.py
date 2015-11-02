@@ -2,7 +2,10 @@ import os
 import requests
 import redo
 import logging
+import time
 from taskcluster import encryptEnvVar
+from jose import jws
+from jose.constants import ALGORITHMS
 
 log = logging.getLogger(__name__)
 
@@ -55,3 +58,18 @@ def encryptEnvVar_wrapper(*args, **kwargs):
         *args, keyFile=os.path.join(os.path.dirname(__file__),
                                     "data", "docker-worker-pub.pem"),
         **kwargs)
+
+
+def sign_task(task_id, pvt_key, valid_for=3600, algorithm=ALGORITHMS.RS512):
+    # reserved JWT claims, to be verified
+    # Issued At
+    iat = int(time.time())
+    # Expiration Time
+    exp = iat + valid_for
+    claims = {
+        "iat": iat,
+        "exp": exp,
+        "taskId": task_id,
+        "version": "1",
+    }
+    return jws.sign(claims, pvt_key, algorithm=algorithm)

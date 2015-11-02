@@ -4,3 +4,4 @@ dist
 *.egg-info
 dist/
 .hypothesis/
+.cache/
