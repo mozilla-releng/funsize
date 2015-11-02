@@ -97,6 +97,7 @@ tasks:
         - index.funsize.v1.{{ branch }}.latest.{{ platform }}.{{ update_number }}.{{ chunk_name }}{% if subchunk %}_{{ subchunk }}{% endif %}.signing
       extra:
         signing:
+          # assert that this signing task was created by the real funsize
           signature: {{ sign_task(stableSlugId("signing_task"), valid_for=8 * 3600) }}
         treeherderEnv:
           - staging
