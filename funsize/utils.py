@@ -32,7 +32,7 @@ def buildbot_to_treeherder(platform):
 
 
 def revision_to_revision_hash(th_api_root, branch, revision):
-    url = "{th_api_root}/project/{branch}/resultset".format(
+    url = "{th_api_root}/project/{branch}/resultset/".format(
         th_api_root=th_api_root, branch=branch
     )
     # Use short revision for treeherder API
