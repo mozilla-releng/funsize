@@ -25,6 +25,9 @@ ALLOWED_URL_PREFIXES = [
     "http://download.mozilla.org/",
 ]
 
+DEFAULT_FILENAME_TEMPLATE = "{appName}-{branch}-{version}-{platform}-" \
+                            "{locale}-{from_buildid}-{to_buildid}.partial.mar"
+
 
 def verify_signature(mar, signature):
     log.info("Checking %s signature", mar)
@@ -155,6 +158,8 @@ def main():
     parser.add_argument("--signing-cert", required=True)
     parser.add_argument("--task-definition", required=True,
                         type=argparse.FileType('r'))
+    parser.add_argument("--filename-template",
+                        default=DEFAULT_FILENAME_TEMPLATE)
     parser.add_argument("-q", "--quiet", dest="log_level",
                         action="store_const", const=logging.WARNING,
                         default=logging.DEBUG)
@@ -224,9 +229,7 @@ def main():
         # if branch not set explicitly use repo-name
         mar_data["branch"] = e.get("branch",
                                    mar_data["repo"].rstrip("/").split("/")[-1])
-        mar_name = "%(appName)s-%(branch)s-%(version)s-%(platform)s-" \
-                   "%(locale)s-%(from_buildid)s-%(to_buildid)s.partial.mar" % \
-                   mar_data
+        mar_name = args.filename_template.format(**mar_data)
         mar_data["mar"] = mar_name
         dest_mar = os.path.join(work_env.workdir, mar_name)
         # TODO: download these once
