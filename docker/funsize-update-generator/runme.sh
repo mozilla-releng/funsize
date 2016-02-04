@@ -14,7 +14,13 @@ curl --location --retry 10 --retry-delay 10 -o /home/worker/task.json \
 # enable locale cache
 export MBSDIFF_HOOK="/home/worker/bin/mbsdiff_hook.sh -c /tmp/fs-cache"
 
+EXTRA_PARAMS=
+if [ ! -z $FILENAME_TEMPLATE ]; then
+    EXTRA_PARAMS="--filename-template '$FILENAME_TEMPLATE'"
+fi
+
 /home/worker/bin/funsize.py \
     --artifacts-dir "$ARTIFACTS_DIR" \
     --task-definition /home/worker/task.json \
-    --signing-cert "/home/worker/keys/${SIGNING_CERT}.pubkey"
+    --signing-cert "/home/worker/keys/${SIGNING_CERT}.pubkey" \
+    $EXTRA_PARAMS
