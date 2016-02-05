@@ -16,7 +16,7 @@ export MBSDIFF_HOOK="/home/worker/bin/mbsdiff_hook.sh -c /tmp/fs-cache"
 
 EXTRA_PARAMS=
 if [ ! -z $FILENAME_TEMPLATE ]; then
-    EXTRA_PARAMS="--filename-template '$FILENAME_TEMPLATE'"
+    EXTRA_PARAMS="--filename-template $FILENAME_TEMPLATE"
 fi
 
 /home/worker/bin/funsize.py \
