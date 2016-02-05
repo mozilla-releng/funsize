@@ -40,9 +40,19 @@ def download(url, dest, mode=None):
     log.debug("Downloading %s to %s", url, dest)
     r = requests.get(url)
     r.raise_for_status()
+
+    bytes_downloaded = 0
     with open(dest, 'wb') as fd:
         for chunk in r.iter_content(4096):
             fd.write(chunk)
+            bytes_downloaded += len(chunk)
+
+    log.debug('Downloaded %i bytes', bytes_downloaded)
+    if 'content-length' in r.headers:
+        log.debug('Content-Length: %i bytes', r.headers['content-length'])
+        if bytes_downloaded != int(r.headers['content-length']):
+            raise IOError('Unexpected number of bytes downloaded')
+
     if mode:
         log.debug("chmod %o %s", mode, dest)
         os.chmod(dest, mode)
