@@ -63,7 +63,7 @@ tasks:
         createdForUser: release+funsize@mozilla.com
 
       payload:
-        image: 'rail/funsize-update-generator@sha256:9bde873eaf744ccfaf9b3dc6b363ac40cf38e93a0f33d88e6750849b25723db0'
+        image: 'rail/funsize-update-generator@sha256:7806527cf4e45471cefca0b72175b1ff51f2195a5c1c342240a5847d27e78263'
         maxRunTime: 7200
         command:
           - /runme.sh
@@ -163,7 +163,7 @@ tasks:
         createdForUser: release+funsize@mozilla.com
 
       payload:
-        image: 'rail/funsize-balrog-submitter@sha256:008ab3ff8112c3fa2dce1b3f00e9829663d07181d9ac7ecac7fef58925d834e5'
+        image: 'rail/funsize-balrog-submitter@sha256:9d109d9243a8678dd85bebf8562da823b90b2064b0e09289b0cf8bb05e48a58e'
         maxRunTime: 3600
         command:
           - /runme.sh
