@@ -47,9 +47,9 @@ def download(url, dest, mode=None):
             fd.write(chunk)
             bytes_downloaded += len(chunk)
 
-    log.debug('Downloaded %i bytes', bytes_downloaded)
+    log.debug('Downloaded %s bytes', bytes_downloaded)
     if 'content-length' in r.headers:
-        log.debug('Content-Length: %i bytes', r.headers['content-length'])
+        log.debug('Content-Length: %s bytes', r.headers['content-length'])
         if bytes_downloaded != int(r.headers['content-length']):
             raise IOError('Unexpected number of bytes downloaded')
 
