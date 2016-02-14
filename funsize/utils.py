@@ -19,6 +19,16 @@ def properties_to_dict(props):
     return props_dict
 
 
+def fetch_json(url, params=None):
+    headers = {
+        'Accept': 'application/json',
+        'User-Agent': 'funsize',
+    }
+    response = requests.get(url, params=params, headers=headers, timeout=30)
+    response.raise_for_status()
+    return response.json()
+
+
 def buildbot_to_treeherder(platform):
     # Coming from https://github.com/mozilla/treeherder/blob/master/ui/js/values.js
     m = {
@@ -43,8 +53,8 @@ def revision_to_revision_hash(th_api_root, branch, revision):
                               for k, v in params.iteritems())
         try:
             log.debug("Connecting to %s?%s", url, params_str)
-            r = requests.get(url, params=params)
-            return r.json()["results"][0]["revision_hash"]
+            result_sets = fetch_json(url, params=params)
+            return result_sets["results"][0]["revision_hash"]
         except:
             log.exception("Failed to connect to %s?%s", url, params_str)
     else:
