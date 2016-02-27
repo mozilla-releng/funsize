@@ -161,7 +161,7 @@ def main():
                 platform=e["platform"], productName=e["appName"],
                 version=e["toVersion"],
                 build_number=e["toBuildNumber"],
-                appVersion=e["toVersion"], extVersion=e["toVersion"],
+                appVersion=e["version"], extVersion=e["version"],
                 buildID=e["to_buildid"], locale=e["locale"],
                 hashFunction='sha512',
                 partialInfo=partial_info, completeInfo=complete_info,
