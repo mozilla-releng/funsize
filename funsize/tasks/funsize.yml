@@ -9,7 +9,7 @@ scopes:
   - queue:*
   - docker-worker:*
   - scheduler:*
-  - signing:*
+  - project:releng:signing:*
   - docker-worker:feature:balrogVPNProxy
 
 tasks:
@@ -115,8 +115,8 @@ tasks:
       workerType: "signing-worker-v1"
       provisionerId: "signing-provisioner-v1"
       scopes:
-        - signing:cert:nightly-signing
-        - signing:format:mar
+        - project:releng:signing:cert:nightly-signing
+        - project:releng:signing:format:mar
       tags:
         createdForUser: release+funsize@mozilla.com
 

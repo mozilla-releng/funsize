@@ -28,7 +28,7 @@ setup(
         "pycparser",
         "PyHawk-with-a-single-extra-commit",
         "Jinja2",
-        "python-jose",
+        "python-jose<=0.5.6",
         "PyYAML",
         "redo",
         # Because taskcluster hard pins this version...
