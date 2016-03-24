@@ -14,6 +14,7 @@ scopes:
 
 tasks:
   - taskId: '{{ stableSlugId("update_generator_task") }}'
+    reruns: 5
     task:
       created: '{{ now }}'
       deadline: '{{ fromNow("24 hours") }}'
@@ -78,6 +79,7 @@ tasks:
             expires: '{{ fromNow("7 days") }}'
 
   - taskId: '{{ stableSlugId("signing_task") }}'
+    reruns: 5
     requires:
       - '{{ stableSlugId("update_generator_task") }}'
     task:
@@ -124,6 +126,7 @@ tasks:
         signingManifest: 'https://queue.taskcluster.net/v1/task/{{ stableSlugId("update_generator_task") }}/artifacts/public/env/manifest.json'
 
   - taskId: '{{ stableSlugId("balrog_task") }}'
+    reruns: 5
     requires:
       - '{{ stableSlugId("signing_task") }}'
     task:
