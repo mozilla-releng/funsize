@@ -166,7 +166,7 @@ tasks:
         createdForUser: release+funsize@mozilla.com
 
       payload:
-        image: 'rail/funsize-balrog-submitter@sha256:1337025c4aed3215467c34c1f400532bd0fd3990ae99448e1b423accd1906c3c'
+        image: 'rail/funsize-balrog-submitter@sha256:8c397d747b487be85abed4b4f9f3ee9378caa3b5140678d3d0578be69916c38b'
         maxRunTime: 3600
         command:
           - /runme.sh
