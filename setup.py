@@ -20,7 +20,7 @@ setup(
         "argparse",
         "cffi",
         # PGPy depends on this _specific_ version of cryptography
-        "cryptography==0.6",
+        "cryptography",
         "enum34",
         "kombu",
         "more_itertools",
