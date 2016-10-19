@@ -155,19 +155,22 @@ class FunsizeWorker(ConsumerMixin):
             platform = funsize_info["platform"]
             branch = funsize_info["branch"]
             product = funsize_info["appName"]
+            mar_urls = funsize_info['completeMarUrls']
             self.create_partials(
                 product=product, branch=branch, platform=platform,
                 locales=locales, revision=properties["revision"],
-                chunk_name=chunk_name)
+                mar_urls=mar_urls, chunk_name=chunk_name)
         else:
             log.debug("en-US build detected")
             self.create_partials(
                 product=properties["appName"], branch=properties["branch"],
                 platform=properties["platform"], locales=['en-US'],
-                revision=properties["revision"], chunk_name=chunk_name)
+                revision=properties["revision"],
+                mar_urls={'en-US': properties['completeMarUrl']},
+                chunk_name=chunk_name)
 
     def create_partials(self, product, branch, platform, locales, revision,
-                        chunk_name=1):
+                        mar_urls, chunk_name=1):
         """Calculates "from" and "to" MAR URLs and calls  create_task_graph().
         Currently "from" MAR is 2 releases behind to avoid duplication of
         existing CI partials.
@@ -177,17 +180,18 @@ class FunsizeWorker(ConsumerMixin):
         :param platform: buildbot platform (linux, macosx64)
         :param locales: list of locales
         :param revision: revision of the "to" build
+        :param mar_urls: dictionary of {locale:mar file url} for each locale
         :param chunk_name: chunk name
         """
         # TODO: move limit to config
         # Get last 5 releases (including current),
         # generate partial for 4 latest
+
         last_releases = self.balrog_client.get_releases(product, branch)[:5]
-        release_to = last_releases.pop(0)
+
         per_chunk = 5
         for update_number, release_from in enumerate(last_releases, start=1):
             log.debug("From: %s", release_from)
-            log.debug("To: %s", release_to)
             for n, chunk in enumerate(chunked(locales, per_chunk), start=1):
                 extra = []
                 for locale in chunk:
@@ -195,11 +199,18 @@ class FunsizeWorker(ConsumerMixin):
                         build_from = self.balrog_client.get_build(
                             release_from, platform, locale)
                         log.debug("Build from: %s", build_from)
-                        build_to = self.balrog_client.get_build(
-                            release_to, platform, locale)
-                        log.debug("Build to: %s", build_to)
                         from_mar = build_from["completes"][0]["fileUrl"]
-                        to_mar = build_to["completes"][0]["fileUrl"]
+                        to_mar = mar_urls.get(locale)
+
+                        log.debug("Build to MAR: %s", to_mar)
+
+                        if to_mar == from_mar:
+                            # Balrog may or may not have information about the latest
+                            # release already. Don't make partials, as the diff
+                            # won't be useful.
+                            log.debug(
+                                "From and To MARs are the same, skipping.")
+                            continue
                         extra.append({
                             "locale": locale,
                             "from_mar": from_mar,
