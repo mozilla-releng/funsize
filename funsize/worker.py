@@ -201,7 +201,7 @@ class FunsizeWorker(ConsumerMixin):
             if submitted_releases >= partial_limit:
                 log.debug(
                     "Already submitted {} jobs, ignoring most recent release.".format(partial_limit))
-                continue
+                break
             for n, chunk in enumerate(chunked(locales, per_chunk), start=1):
                 extra = []
                 for locale in chunk:
