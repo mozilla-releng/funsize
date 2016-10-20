@@ -184,14 +184,24 @@ class FunsizeWorker(ConsumerMixin):
         :param chunk_name: chunk name
         """
         # TODO: move limit to config
-        # Get last 5 releases (including current),
-        # generate partial for 4 latest
-
-        last_releases = self.balrog_client.get_releases(product, branch)[:5]
+        partial_limit = 4
+        # fetch one more than we need, so we can discard it later if needed.
+        # an earlier run may have added this (product, branch) combination to
+        # balrog before we reach this point, so the most recent should be thrown
+        # away if too many.
+        last_releases = self.balrog_client.get_releases(product, branch)[
+            :partial_limit + 1]
 
         per_chunk = 5
-        for update_number, release_from in enumerate(last_releases, start=1):
+        submitted_releases = 0
+        # the iso date is in the name returned by get_releases, so sorting without
+        # a special key works.
+        for update_number, release_from in enumerate(sorted(last_releases), start=1):
             log.debug("From: %s", release_from)
+            if submitted_releases >= partial_limit:
+                log.debug(
+                    "Already submitted {} jobs, ignoring most recent release.".format(partial_limit))
+                continue
             for n, chunk in enumerate(chunked(locales, per_chunk), start=1):
                 extra = []
                 for locale in chunk:
@@ -200,6 +210,11 @@ class FunsizeWorker(ConsumerMixin):
                             release_from, platform, locale)
                         log.debug("Build from: %s", build_from)
                         from_mar = build_from["completes"][0]["fileUrl"]
+
+                        if locale not in mar_urls:
+                            log.error("locale {} has no MAR URL for {} {} {}".format(
+                                locale, product, branch, platform))
+                            continue
                         to_mar = mar_urls.get(locale)
 
                         log.debug("Build to MAR: %s", to_mar)
@@ -233,6 +248,8 @@ class FunsizeWorker(ConsumerMixin):
                         branch=branch, revision=revision, platform=platform,
                         update_number=update_number, chunk_name=chunk_name,
                         extra=extra, subchunk=subchunk)
+
+                    submitted_releases += 1
                 else:
                     log.warn("Nothing to submit")
 
