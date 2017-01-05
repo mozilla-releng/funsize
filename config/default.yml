@@ -12,7 +12,8 @@ pulse:
     user: null
     password: null
     queue: funsize
-    exchange: "exchange/build/"
+    bb_exchange: "exchange/build"
+    tc_exchange: "exchange/taskcluster-queue/v1/task-completed"
 
 taskcluster:
     credentials:

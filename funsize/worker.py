@@ -1,15 +1,18 @@
 import datetime
 import logging
 import time
-from kombu import Exchange, Queue
-from kombu.mixins import ConsumerMixin
 import os
 import re
-from taskcluster import slugId, stringDate, fromNow, stableSlugId
-import yaml
 import json
-from jinja2 import Template, StrictUndefined
 import requests
+import yaml
+from kombu import Exchange, Queue
+from kombu.mixins import ConsumerMixin
+from taskcluster import slugId, stringDate, fromNow, stableSlugId
+from taskcluster.exceptions import TaskclusterFailure
+# Already importing Queue from kombu, above.
+from taskcluster import Queue as tc_Queue
+from jinja2 import Template, StrictUndefined
 from more_itertools import chunked
 from functools import partial
 
@@ -32,11 +35,180 @@ BUILDERS = [
 ]
 
 
+def parse_taskcluster_message(payload):
+    """Get the necessary data for funsize, from a TC pulse message
+
+    Args:
+        payload (kombu.Message.body): the pulse message payload
+    Returns:
+        dict: all the task information needed to submit a partial
+            mar generation task.
+
+    Funsize listens to for the signing tasks being complete.
+    This has the disadvantage that the task information only lists
+    the signed artifacts, which doesn't include  balrog_props.json
+
+    balrog_props.json contains data we need to submit to funsize,
+    so we examine the current task's dependencies to work out what
+    the previous step was, and get that task's artifacts. Among
+    those will be balrog_props.json, which will contain the appName,
+    platform and branch
+    """
+
+    graph_data = dict()
+    graph_data['locales'] = list()
+    graph_data['mar_urls'] = dict()
+
+    # taskcluster.Queue, not kombu.Queue
+    queue = tc_Queue()
+
+    # taskid = payload['status']['taskId']
+    taskid = payload.get('status', dict()).get('taskId')
+
+    if not taskid:
+        return
+
+    try:
+        task_definition = queue.task(taskid)
+    except TaskclusterFailure as excp:
+        log.exception("Unable to load task definition for %s", taskid)
+        return
+
+    previous_task = task_definition['dependencies'][0]
+
+    try:
+        previous_definition = queue.task(previous_task)
+    except TaskclusterFailure as excp:
+        log.exception("Unable to load task definition for %s", taskid)
+        return
+
+    # Sadly not available by other means, unless we trust that one of the
+    # pulse routes will remain the same.
+    graph_data['revision'] = previous_definition[
+        'payload']['env']['GECKO_HEAD_REV']
+
+    previous_artifacts = queue.listLatestArtifacts(previous_task)
+
+    # We just need the data from one balrog_props.json, as the
+    # fields we want are all the same.
+    props_name = next(a for a in previous_artifacts['artifacts'] if 'balrog_props.json' in a)
+    balrog_props = queue.getLatestArtifact(previous_task, props_name)
+    log.debug("balrog_props.json: %s", balrog_props)
+    graph_data['appName'] = balrog_props['properties']['appName']
+    graph_data['platform'] = balrog_props['properties']['platform']
+    graph_data['branch'] = balrog_props['properties']['branch']
+
+    signing_artifacts = queue.listLatestArtifacts(taskid)
+
+    for artifact in signing_artifacts['artifacts']:
+
+        # skip over the artifacts that aren't relevant
+        if 'target.complete.mar' not in artifact['name']:
+            continue
+
+        # if the mar url doesn't have a locale inside then
+        # it is en-US.  Otherwise, parse for locale. This isn't
+        # stored in the task's metadata at the moment.
+
+        # Ideally we should check that an extracted locale
+        # is valid before continuing, but the builds produce
+        # some that aren't listed in locales.locale_alias, such
+        # as 'ast'  ('ast_es' is present in the library)
+        if artifact['name'] == 'public/build/target.complete.mar':
+            mar_locale = 'en-US'
+        else:
+            try:
+                # public/build/<locale name>/target.complete.mar
+                mar_locale = artifact['name'].split('/')[-2]
+            except IndexError:
+                log.error("Unable to extract locale from %s",
+                          artifact['name'])
+                continue
+
+        # When we upgrade the taskcluster python library to >=0.3.6,
+        # use this form:
+        # completeMarUrl = queue.buildUrl('getLatestArtifact', replDict={
+        #    'taskId': taskid,
+        #    'name': artifact['name'],
+        # })
+        try:
+            completeMarUrl = queue.buildUrl(
+                'getLatestArtifact',
+                taskId=taskid,
+                name=artifact['name']
+            )
+        except TaskclusterFailure as excp:
+            log.exception(excp)
+            return
+
+        graph_data['locales'].append(mar_locale)
+        graph_data['mar_urls'][mar_locale] = completeMarUrl
+
+    return graph_data
+
+
+def parse_buildbot_message(payload):
+    """Parse incoming buildbot pulse message.
+
+    Args:
+        payload (kombu.Message.body): the pulse message payload
+    Returns:
+        dict: all the task information needed to submit a partial
+            mar generation task.
+
+    This is extracted from the previous incarnation, which only
+    understood buildbot messages. The relevant details are all
+    in the pulse message, so just need to be extracted.
+    """
+    graph_data = dict()
+
+    buildername = payload["build"]["builderName"]
+    if not interesting_buildername(buildername):
+        log.debug("Ignoring %s: not interested", buildername)
+        return
+
+    job_result = payload["results"]
+    if job_result != 0:
+        log.debug("Ignoring %s with result %s", buildername, job_result)
+        return
+
+    properties = properties_to_dict(payload["build"]["properties"])
+
+    # try to guess chunk number, last digit in the buildername
+    try:
+        graph_data['chunk_name'] = int(buildername.split("-")[-1])
+    except ValueError:
+        # undefined (en-US) use 0
+        graph_data['chunk_name'] = "en-US"
+
+    if "locales" in properties:
+        log.debug("L10N repack detected")
+        funsize_info = json.loads(properties['funsize_info'])
+        locales = json.loads(properties['locales'])
+        graph_data['locales'] = [locale for locale, result in locales.iteritems()
+                                 if str(result).lower() == 'success' or
+                                 str(result) == '0']
+        graph_data['mar_urls'] = funsize_info['completeMarUrls']
+        graph_data['platform'] = funsize_info["platform"]
+        graph_data['branch'] = funsize_info["branch"]
+        graph_data['product'] = funsize_info["appName"]
+        graph_data['revision'] = properties['revision']
+    else:
+        graph_data['locales'] = ['en-US']
+        graph_data['mar_urls'] = {'en-US': properties['completeMarUrl']}
+        graph_data['platform'] = properties['platform']
+        graph_data['branch'] = properties['branch']
+        graph_data['product'] = properties['appName']
+        graph_data['revision'] = properties['revision']
+
+    return graph_data
+
+
 class FunsizeWorker(ConsumerMixin):
 
-    def __init__(self, connection, queue_name, exchange, balrog_client,
-                 scheduler, s3_info, th_api_root, balrog_worker_api_root,
-                 pvt_key):
+    def __init__(self, connection, queue_name, bb_exchange, tc_exchange,
+                 balrog_client, scheduler, s3_info, th_api_root,
+                 balrog_worker_api_root, pvt_key):
         """Funsize consumer worker
         :type connection: kombu.Connection
         :param queue_name: Full queue name, including queue/<user> prefix
@@ -46,7 +218,8 @@ class FunsizeWorker(ConsumerMixin):
         """
         self.connection = connection
         # Using passive mode is important, otherwise pulse returns 403
-        self.exchange = Exchange(exchange, type='topic', passive=True)
+        self.bb_exchange = Exchange(bb_exchange, type='topic', passive=True)
+        self.tc_exchange = Exchange(tc_exchange, type='topic', passive=True)
         self.queue_name = queue_name
         self.balrog_client = balrog_client
         self.scheduler = scheduler
@@ -56,7 +229,7 @@ class FunsizeWorker(ConsumerMixin):
         self.pvt_key = pvt_key
 
     @property
-    def routing_keys(self):
+    def bb_routing_keys(self):
         """Returns an explicit list of routing patterns.
 
         Instead of using "build.*.*.finished", which generates a lot of noise,
@@ -86,14 +259,31 @@ class FunsizeWorker(ConsumerMixin):
                 for platform in PLATFORMS]
 
     @property
+    def tc_routing_keys(self):
+        """Returns an explicit list of routing patterns for taskcluster builds.
+
+        All the Taskcluster signing jobs publish their announcements
+        through the below routes, specifically so that funsize can
+        read them without much analysis of what's relevant.
+        """
+
+        # TODO: move to configs
+        return [u'route.index.project.releng.funsize.date.level-3']
+
+    @property
     def queues(self):
         """List of queues used by worker.
         Multiple queues are used to track multiple routing keys.
         """
-        return [Queue(name=self.queue_name, exchange=self.exchange,
-                      routing_key=routing_key, durable=True, exclusive=False,
-                      auto_delete=False)
-                for routing_key in self.routing_keys]
+        bb_queues = [Queue(name=self.queue_name, exchange=self.bb_exchange,
+                           routing_key=routing_key, durable=True,
+                           exclusive=False, auto_delete=False)
+                     for routing_key in self.bb_routing_keys]
+        tc_queues = [Queue(name=self.queue_name, exchange=self.tc_exchange,
+                           routing_key=routing_key, durable=True,
+                           exclusive=False, auto_delete=False)
+                     for routing_key in self.tc_routing_keys]
+        return bb_queues + tc_queues
 
     def get_consumers(self, Consumer, channel):
         """Implement parent's method called to get the list of consumers"""
@@ -109,7 +299,7 @@ class FunsizeWorker(ConsumerMixin):
         :type message: kombu.Message
         """
         try:
-            self.dispatch_message(body)
+            self.dispatch_message(body, message)
         except Exception:
             log.exception("Failed to process message")
         finally:
@@ -122,52 +312,55 @@ class FunsizeWorker(ConsumerMixin):
         """
         log.info('Listening...')
 
-    def dispatch_message(self, body):
+    def dispatch_message(self, body, message):
         """Dispatches incoming pulse messages.
         If the method detects L10N repacks, it creates multiple Taskcluster
         tasks, otherwise a single en-US task is created.
         :type body: kombu.Message.body
         """
-        payload = body["payload"]
-        buildername = payload["build"]["builderName"]
-        if not interesting_buildername(buildername):
-            log.debug("Ignoring %s: not interested", buildername)
-            return
-        job_result = payload["results"]
-        if job_result != 0:
-            log.debug("Ignoring %s with result %s", buildername, job_result)
-            return
-        properties = properties_to_dict(payload["build"]["properties"])
-        # try to guess chunk number, last digit in the buildername
-        try:
-            chunk_name = int(buildername.split("-")[-1])
-        except ValueError:
-            # undefined (en-US) use 0
-            chunk_name = "en-US"
 
-        if "locales" in properties:
-            log.debug("L10N repack detected")
-            funsize_info = json.loads(properties["funsize_info"])
-            locales = json.loads(properties["locales"])
-            locales = [locale for locale, result in locales.iteritems()
-                       if str(result).lower() == "success" or
-                       str(result) == '0']
-            platform = funsize_info["platform"]
-            branch = funsize_info["branch"]
-            product = funsize_info["appName"]
-            mar_urls = funsize_info['completeMarUrls']
-            self.create_partials(
-                product=product, branch=branch, platform=platform,
-                locales=locales, revision=properties["revision"],
-                mar_urls=mar_urls, chunk_name=chunk_name)
+        if self.is_tc_message(message):
+            # Useful TC data is in message.payload, unlike
+            # Buildbot's which is in body['payload']
+            gdata = parse_taskcluster_message(message.payload)
         else:
-            log.debug("en-US build detected")
-            self.create_partials(
-                product=properties["appName"], branch=properties["branch"],
-                platform=properties["platform"], locales=['en-US'],
-                revision=properties["revision"],
-                mar_urls={'en-US': properties['completeMarUrl']},
-                chunk_name=chunk_name)
+            # buildbot routes have wildcards in which adds to the
+            # overhead of working out whether it's one of ours. Since
+            # we were accepting all of them before, continue to do so.
+            gdata = parse_buildbot_message(body['payload'])
+
+        if not gdata:
+            log.error("No data about the task graph available")
+            return
+
+        self.create_partials(
+            product=gdata["appName"],
+            branch=gdata["branch"],
+            platform=gdata["platform"],
+            locales=gdata['locales'],
+            revision=gdata["revision"],
+            mar_urls=gdata['mar_urls'],
+            chunk_name=gdata.get('chunk_name', 1)
+        )
+
+    def is_tc_message(self, message):
+        """Determine whether this message came from taskcluster.
+
+        Args:
+            message (kombu.Message): the message under examination
+        Returns:
+            bool: True if the message came from a taskcluster route, False otherwise.
+
+        If any of the routes used in the message exist in the
+        taskcluster routing keys we're looking at, then it is
+        a taskcluster message.
+        """
+
+        # some messages we get don't have a CC list
+        routes = [message.delivery_info['routing_key']] + \
+            message.headers.get('CC', list())
+
+        return any(r in self.tc_routing_keys for r in routes)
 
     def create_partials(self, product, branch, platform, locales, revision,
                         mar_urls, chunk_name=1):
@@ -200,7 +393,7 @@ class FunsizeWorker(ConsumerMixin):
             log.debug("From: %s", release_from)
             if submitted_releases >= partial_limit:
                 log.debug(
-                    "Already submitted {} jobs, ignoring most recent release.".format(partial_limit))
+                    "Already submitted %s jobs, ignoring most recent release.", partial_limit)
                 break
             for n, chunk in enumerate(chunked(locales, per_chunk), start=1):
                 extra = []
@@ -212,8 +405,8 @@ class FunsizeWorker(ConsumerMixin):
                         from_mar = build_from["completes"][0]["fileUrl"]
 
                         if locale not in mar_urls:
-                            log.error("locale {} has no MAR URL for {} {} {}".format(
-                                locale, product, branch, platform))
+                            log.error("locale %s has no MAR URL for %s %s %s",
+                                      locale, product, branch, platform)
                             continue
                         to_mar = mar_urls.get(locale)
 
