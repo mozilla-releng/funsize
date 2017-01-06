@@ -91,7 +91,8 @@ def parse_taskcluster_message(payload):
 
     # We just need the data from one balrog_props.json, as the
     # fields we want are all the same.
-    props_name = next(a for a in previous_artifacts['artifacts'] if 'balrog_props.json' in a)
+    props_name = next(a['name'] for a in previous_artifacts[
+                      'artifacts'] if 'balrog_props.json' in a['name'])
     balrog_props = queue.getLatestArtifact(previous_task, props_name)
     log.debug("balrog_props.json: %s", balrog_props)
     try:
@@ -101,7 +102,8 @@ def parse_taskcluster_message(payload):
     except KeyError as excp:
         # android builds don't appear to have the right fields, so log error but
         # not exception
-        log.error("Unable to extract data from balrog_props: %s, %s", excp, balrog_props)
+        log.error("Unable to extract data from balrog_props: %s, %s",
+                  excp, balrog_props)
         return
 
     signing_artifacts = queue.listLatestArtifacts(taskid)
