@@ -75,7 +75,8 @@ def main():
                     userid=pulse_user, password=pulse_password,
                     virtual_host='/', ssl=True) as connection:
         FunsizeWorker(connection=connection, queue_name=queue_name,
-                      exchange=config["pulse"]["exchange"],
+                      bb_exchange=config["pulse"]["bb_exchange"],
+                      tc_exchange=config["pulse"]["tc_exchange"],
                       balrog_client=balrog_client,
                       scheduler=scheduler, s3_info=s3_info,
                       th_api_root=th_api_root,

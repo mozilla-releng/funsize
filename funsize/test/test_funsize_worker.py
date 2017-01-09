@@ -13,7 +13,9 @@ class TestFunsizeWorkerFromTemplate(TestCase):
         s3_info = {"s3_bucket": "b",
                    "aws_access_key_id": "keyid",
                    "aws_secret_access_key": "s"}
-        w = FunsizeWorker(connection=None, exchange="exchange",
+        w = FunsizeWorker(connection=None,
+                          bb_exchange="bb_exchange",
+                          tc_exchange="tc_exchange",
                           queue_name="qname", scheduler="scheduler",
                           balrog_client=balrog_client, s3_info=s3_info,
                           th_api_root="https://localhost/api",
