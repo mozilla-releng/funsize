@@ -96,7 +96,7 @@ def parse_taskcluster_message(payload):
     balrog_props = queue.getLatestArtifact(previous_task, props_name)
     log.debug("balrog_props.json: %s", balrog_props)
     try:
-        graph_data['appName'] = balrog_props['properties']['appName']
+        graph_data['product'] = balrog_props['properties']['appName']
         graph_data['platform'] = balrog_props['properties']['platform']
         graph_data['branch'] = balrog_props['properties']['branch']
     except KeyError as excp:
@@ -342,7 +342,7 @@ class FunsizeWorker(ConsumerMixin):
             return
 
         self.create_partials(
-            product=gdata["appName"],
+            product=gdata["product"],
             branch=gdata["branch"],
             platform=gdata["platform"],
             locales=gdata['locales'],
