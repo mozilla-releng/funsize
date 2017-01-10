@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="funsize",
-    version="0.64",
+    version="0.65",
     description="Funsize Scheduler",
     author="Mozilla Release Engineering",
     packages=["funsize"],
