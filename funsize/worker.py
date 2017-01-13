@@ -276,7 +276,11 @@ class FunsizeWorker(ConsumerMixin):
         """
 
         # TODO: move to configs
-        return [u'route.index.project.releng.funsize.date.level-3']
+        return [
+            u'route.index.project.releng.funsize.date.level-3',
+            u'route.index.project.releng.funsize.level-3.date',
+
+        ]
 
     @property
     def queues(self):
@@ -331,6 +335,7 @@ class FunsizeWorker(ConsumerMixin):
             # Useful TC data is in message.payload, unlike
             # Buildbot's which is in body['payload']
             gdata = parse_taskcluster_message(message.payload)
+            log.info("Message from Taskcluster: %s", gdata)
         else:
             # buildbot routes have wildcards in which adds to the
             # overhead of working out whether it's one of ours. Since
