@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="funsize",
-    version="0.68",
+    version="0.69",
     description="Funsize Scheduler",
     author="Mozilla Release Engineering",
     packages=["funsize"],
@@ -30,7 +30,7 @@ setup(
         "kombu==3.0.26",
         "MarkupSafe==0.23",
         "more_itertools==2.2",
-        "PGPy==0.4.0.post1",
+        "PGPy>=0.4.0",
         "PyHawk-with-a-single-extra-commit==0.1.5",
         "PyYAML==3.10",
         "pycparser==2.13",
