@@ -99,6 +99,7 @@ def parse_taskcluster_message(payload):
         graph_data['product'] = balrog_props['properties']['appName']
         graph_data['platform'] = balrog_props['properties']['platform']
         graph_data['branch'] = balrog_props['properties']['branch']
+        graph_data['mar_signing_format'] = balrog_props['properties'].get('mar_signing_format', 'mar')
     except KeyError as excp:
         # android builds don't appear to have the right fields, so log error but
         # not exception
@@ -200,6 +201,7 @@ def parse_buildbot_message(payload):
         graph_data['platform'] = funsize_info["platform"]
         graph_data['branch'] = funsize_info["branch"]
         graph_data['product'] = funsize_info["appName"]
+        graph_data['mar_signing_format'] = funsize_info.get('mar_signing_format', 'mar')
         graph_data['revision'] = properties['revision']
     else:
         graph_data['locales'] = ['en-US']
@@ -208,6 +210,7 @@ def parse_buildbot_message(payload):
         graph_data['branch'] = properties['branch']
         graph_data['product'] = properties['appName']
         graph_data['revision'] = properties['revision']
+        graph_data['mar_signing_format'] = properties.get('mar_signing_format', 'mar')
 
     return graph_data
 
@@ -353,7 +356,8 @@ class FunsizeWorker(ConsumerMixin):
             locales=gdata['locales'],
             revision=gdata["revision"],
             mar_urls=gdata['mar_urls'],
-            chunk_name=gdata.get('chunk_name', 1)
+            chunk_name=gdata.get('chunk_name', 1),
+            mar_signing_format=gdata['mar_signing_format'],
         )
 
     def is_tc_message(self, message):
@@ -376,7 +380,7 @@ class FunsizeWorker(ConsumerMixin):
         return any(r in self.tc_routing_keys for r in routes)
 
     def create_partials(self, product, branch, platform, locales, revision,
-                        mar_urls, chunk_name=1):
+                        mar_urls, mar_signing_format, chunk_name=1):
         """Calculates "from" and "to" MAR URLs and calls  create_task_graph().
         Currently "from" MAR is 2 releases behind to avoid duplication of
         existing CI partials.
@@ -453,28 +457,29 @@ class FunsizeWorker(ConsumerMixin):
                     self.submit_task_graph(
                         branch=branch, revision=revision, platform=platform,
                         update_number=update_number, chunk_name=chunk_name,
-                        extra=extra, subchunk=subchunk)
+                        extra=extra, subchunk=subchunk,
+                        mar_signing_format=mar_signing_format)
 
                     submitted_releases += 1
                 else:
                     log.warn("Nothing to submit")
 
     def submit_task_graph(self, branch, revision, platform, update_number,
-                          chunk_name, subchunk, extra):
+                          chunk_name, subchunk, extra, mar_signing_format):
         graph_id = slugId()
         log.info("Submitting a new graph %s", graph_id)
 
         task_graph = self.from_template(
             extra=extra, update_number=update_number, platform=platform,
             chunk_name=chunk_name, subchunk=subchunk, revision=revision,
-            branch=branch)
+            branch=branch, mar_signing_format=mar_signing_format)
         log.debug("Graph definition: %s", task_graph)
         res = self.scheduler.createTaskGraph(graph_id, task_graph)
         log.info("Result was: %s", res)
         return graph_id
 
     def from_template(self, platform, revision, branch, update_number,
-                      chunk_name, subchunk, extra):
+                      chunk_name, subchunk, extra, mar_signing_format):
         """Reads and populates graph template.
 
         :param platform: buildbot platform (linux, macosx64)
@@ -516,6 +521,7 @@ class FunsizeWorker(ConsumerMixin):
             "chunk_name": chunk_name,
             "subchunk": subchunk,
             "sign_task": partial(sign_task, pvt_key=self.pvt_key),
+            "mar_signing_format": mar_signing_format,
         }
         with open(template_file) as f:
             template = Template(f.read(), undefined=StrictUndefined)

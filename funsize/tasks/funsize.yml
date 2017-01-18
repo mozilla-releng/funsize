@@ -118,7 +118,7 @@ tasks:
       provisionerId: "signing-provisioner-v1"
       scopes:
         - project:releng:signing:cert:nightly-signing
-        - project:releng:signing:format:mar
+        - project:releng:signing:format:{{ mar_signing_format }}
       tags:
         createdForUser: release+funsize@mozilla.com
 
