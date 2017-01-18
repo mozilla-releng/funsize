@@ -279,7 +279,7 @@ class FunsizeWorker(ConsumerMixin):
         return [
             u'route.index.project.releng.funsize.date.level-3',
             u'route.index.project.releng.funsize.level-3.date',
-
+            u'route.index.project.releng.funsize.level-3.mozilla-central',
         ]
 
     @property
