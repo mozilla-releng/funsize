@@ -99,7 +99,8 @@ def parse_taskcluster_message(payload):
         graph_data['product'] = balrog_props['properties']['appName']
         graph_data['platform'] = balrog_props['properties']['platform']
         graph_data['branch'] = balrog_props['properties']['branch']
-        graph_data['mar_signing_format'] = balrog_props['properties'].get('mar_signing_format', 'mar')
+        graph_data['mar_signing_format'] = balrog_props[
+            'properties'].get('mar_signing_format', 'mar')
     except KeyError as excp:
         # android builds don't appear to have the right fields, so log error but
         # not exception
@@ -201,7 +202,8 @@ def parse_buildbot_message(payload):
         graph_data['platform'] = funsize_info["platform"]
         graph_data['branch'] = funsize_info["branch"]
         graph_data['product'] = funsize_info["appName"]
-        graph_data['mar_signing_format'] = funsize_info.get('mar_signing_format', 'mar')
+        graph_data['mar_signing_format'] = funsize_info.get(
+            'mar_signing_format', 'mar')
         graph_data['revision'] = properties['revision']
     else:
         graph_data['locales'] = ['en-US']
@@ -210,7 +212,8 @@ def parse_buildbot_message(payload):
         graph_data['branch'] = properties['branch']
         graph_data['product'] = properties['appName']
         graph_data['revision'] = properties['revision']
-        graph_data['mar_signing_format'] = properties.get('mar_signing_format', 'mar')
+        graph_data['mar_signing_format'] = properties.get(
+            'mar_signing_format', 'mar')
 
     return graph_data
 
@@ -403,15 +406,11 @@ class FunsizeWorker(ConsumerMixin):
             :partial_limit + 1]
 
         per_chunk = 5
-        submitted_releases = 0
         # the iso date is in the name returned by get_releases, so sorting without
         # a special key works.
         for update_number, release_from in enumerate(sorted(last_releases), start=1):
             log.debug("From: %s", release_from)
-            if submitted_releases >= partial_limit:
-                log.debug(
-                    "Already submitted %s jobs, ignoring most recent release.", partial_limit)
-                break
+
             for n, chunk in enumerate(chunked(locales, per_chunk), start=1):
                 extra = []
                 for locale in chunk:
@@ -459,8 +458,6 @@ class FunsizeWorker(ConsumerMixin):
                         update_number=update_number, chunk_name=chunk_name,
                         extra=extra, subchunk=subchunk,
                         mar_signing_format=mar_signing_format)
-
-                    submitted_releases += 1
                 else:
                     log.warn("Nothing to submit")
 
