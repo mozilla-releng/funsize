@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="funsize",
-    version="0.70",
+    version="0.71",
     description="Funsize Scheduler",
     author="Mozilla Release Engineering",
     packages=["funsize"],
@@ -35,7 +35,7 @@ setup(
         "PyYAML==3.10",
         "pycparser==2.13",
         "pycrypto==2.6.1",
-        "python-jose==0.5.2",
+        "python-jose==0.5.6",
         "redo==1.4.1",
         # Taskcluster pins requests 2.4.3, so we need to de the same,
         # even though we'd rather use a more up-to-date version.
