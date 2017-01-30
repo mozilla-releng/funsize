@@ -6,6 +6,7 @@ import re
 import json
 import requests
 import yaml
+from collections import defaultdict
 from kombu import Exchange, Queue
 from kombu.mixins import ConsumerMixin
 from taskcluster import slugId, stringDate, fromNow, stableSlugId
@@ -92,10 +93,13 @@ def parse_taskcluster_message(payload):
     # We just need the data from one balrog_props.json, as the
     # fields we want are all the same.
     props_name = next(a['name'] for a in previous_artifacts[
-                      'artifacts'] if 'balrog_props.json' in a['name'])
+        'artifacts'] if 'balrog_props.json' in a['name'])
     balrog_props = queue.getLatestArtifact(previous_task, props_name)
     log.debug("balrog_props.json: %s", balrog_props)
     try:
+        # We don't do Android build partials
+        if 'Fennec' in balrog_props['properties']['appName']:
+            return
         graph_data['product'] = balrog_props['properties']['appName']
         graph_data['platform'] = balrog_props['properties']['platform']
         graph_data['branch'] = balrog_props['properties']['branch']
@@ -283,8 +287,6 @@ class FunsizeWorker(ConsumerMixin):
 
         # TODO: move to configs
         return [
-            u'route.index.project.releng.funsize.date.level-3',
-            u'route.index.project.releng.funsize.level-3.date',
             u'route.index.project.releng.funsize.level-3.mozilla-central',
         ]
 
@@ -382,15 +384,43 @@ class FunsizeWorker(ConsumerMixin):
 
         return any(r in self.tc_routing_keys for r in routes)
 
+    def get_builds(self, product, platform, branch, locale, count=4):
+        """Find relevant releases in Balrog
+        Not all releases have all platforms and locales, due
+        to Taskcluster migration.
+
+        Args:
+            product (str): capitalized product name, AKA appName, e.g. Firefox
+            branch (str): branch name (mozilla-central)
+            platform (str): buildbot/taskcluster platform (linux, macosx64)
+            locale (str): locale under investigation
+        Returns:
+            json object from balrog api
+        """
+        last_releases = self.balrog_client.get_releases(product, branch)
+
+        builds = list()
+
+        for release in last_releases:
+            if len(builds) >= count:
+                return builds
+            try:
+                build_from = self.balrog_client.get_build(
+                    release, platform, locale)
+                builds.append(build_from)
+            except requests.HTTPError as excp:
+                log.debug("Build %s/%s/%s not found: %s",
+                          release, platform, locale, excp)
+                continue
+
     def create_partials(self, product, branch, platform, locales, revision,
                         mar_urls, mar_signing_format, chunk_name=1):
-        """Calculates "from" and "to" MAR URLs and calls  create_task_graph().
+        """Calculates "from" and "to" MAR URLs and calls create_task_graph().
         Currently "from" MAR is 2 releases behind to avoid duplication of
         existing CI partials.
-
         :param product: capitalized product name, AKA appName, e.g. Firefox
         :param branch: branch name (mozilla-central)
-        :param platform: buildbot platform (linux, macosx64)
+        :param platform: buildbot/taskcluster platform (linux, macosx64)
         :param locales: list of locales
         :param revision: revision of the "to" build
         :param mar_urls: dictionary of {locale:mar file url} for each locale
@@ -398,74 +428,52 @@ class FunsizeWorker(ConsumerMixin):
         """
         # TODO: move limit to config
         partial_limit = 4
-        # fetch one more than we need, so we can discard it later if needed.
-        # an earlier run may have added this (product, branch) combination to
-        # balrog before we reach this point, so the most recent should be thrown
-        # away if too many.
-        last_releases = self.balrog_client.get_releases(product, branch)[
-            :partial_limit + 1]
-
         per_chunk = 5
-        # the iso date is in the name returned by get_releases, so sorting without
-        # a special key works.
-        for update_number, release_from in enumerate(sorted(last_releases), start=1):
-            log.debug("From: %s", release_from)
 
-            for n, chunk in enumerate(chunked(locales, per_chunk), start=1):
-                extra = []
-                for locale in chunk:
-                    try:
-                        build_from = self.balrog_client.get_build(
-                            release_from, platform, locale)
-                        log.debug("Build from: %s", build_from)
-                        from_mar = build_from["completes"][0]["fileUrl"]
+        tasks = defaultdict(list)
 
-                        if locale not in mar_urls:
-                            log.error("locale %s has no MAR URL for %s %s %s",
-                                      locale, product, branch, platform)
-                            continue
-                        to_mar = mar_urls.get(locale)
+        for locale in locales:
+            to_mar = mar_urls.get(locale)
+            log.info("Build to: %s", to_mar)
+            latest_releases = self.get_builds(
+                product, platform, branch, locale, partial_limit)
+            for update_number, build_from in enumerate(latest_releases, start=1):
+                log.info("Build from: %s", build_from)
+                try:
+                    from_mar = build_from['completes'][0]['fileUrl']
+                except ValueError as excp:
+                    log.error("Unable to extract fileUrl from %s: %s",
+                              build_from, excp)
+                    continue
 
-                        log.debug("Build to MAR: %s", to_mar)
+                if to_mar == from_mar:
+                    # Balrog may or may not have information about the latest
+                    # release already. Don't make partials, as the diff
+                    # won't be useful.
+                    log.debug(
+                        "From and To MARs are the same, skipping.")
+                    continue
 
-                        if to_mar == from_mar:
-                            # Balrog may or may not have information about the latest
-                            # release already. Don't make partials, as the diff
-                            # won't be useful.
-                            log.debug(
-                                "From and To MARs are the same, skipping.")
-                            continue
-                        extra.append({
-                            "locale": locale,
-                            "from_mar": from_mar,
-                            "to_mar": to_mar,
-                        })
-                    except (requests.HTTPError, ValueError):
-                        log.exception(
-                            "Error getting build, skipping this scenario")
+                tasks[update_number].append({
+                    "locale": locale,
+                    "from_mar": from_mar,
+                    "to_mar": to_mar,
+                })
 
-                if extra:
-                    if len(locales) > per_chunk:
-                        # More than 1 chunk
-                        subchunk = n
-                    else:
-                        subchunk = None
-
-                    all_locales = [e["locale"] for e in extra]
-                    log.info("New Funsize task for %s", all_locales)
-                    self.submit_task_graph(
-                        branch=branch, revision=revision, platform=platform,
-                        update_number=update_number, chunk_name=chunk_name,
-                        extra=extra, subchunk=subchunk,
-                        mar_signing_format=mar_signing_format)
-                else:
-                    log.warn("Nothing to submit")
+        for update_number in tasks:
+            for subchunk, extra in enumerate(chunked(tasks[update_number], per_chunk), start=1):
+                all_locales = [e["locale"] for e in extra]
+                log.info("New Funsize task for %s", all_locales)
+                self.submit_task_graph(
+                    branch=branch, revision=revision, platform=platform,
+                    update_number=update_number, chunk_name=chunk_name,
+                    extra=extra, subchunk=subchunk,
+                    mar_signing_format=mar_signing_format)
 
     def submit_task_graph(self, branch, revision, platform, update_number,
                           chunk_name, subchunk, extra, mar_signing_format):
         graph_id = slugId()
         log.info("Submitting a new graph %s", graph_id)
-
         task_graph = self.from_template(
             extra=extra, update_number=update_number, platform=platform,
             chunk_name=chunk_name, subchunk=subchunk, revision=revision,
