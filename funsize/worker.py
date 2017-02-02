@@ -101,7 +101,11 @@ def parse_taskcluster_message(payload):
         if 'Fennec' in balrog_props['properties']['appName']:
             return
         graph_data['product'] = balrog_props['properties']['appName']
-        graph_data['platform'] = balrog_props['properties']['platform']
+
+        # en-US signing jobs list platform as 'stage_platform'
+        graph_data['platform'] = balrog_props['properties'].get('platform')
+        if not graph_data['platform']:
+            graph_data['platform'] = balrog_props['properties']['stage_platform']
         graph_data['branch'] = balrog_props['properties']['branch']
         graph_data['mar_signing_format'] = balrog_props[
             'properties'].get('mar_signing_format', 'mar')
@@ -128,7 +132,7 @@ def parse_taskcluster_message(payload):
         # is valid before continuing, but the builds produce
         # some that aren't listed in locales.locale_alias, such
         # as 'ast'  ('ast_es' is present in the library)
-        if artifact['name'] == 'public/build/target.complete.mar':
+        if artifact['name'] == 'public/build/update/target.complete.mar':
             mar_locale = 'en-US'
         else:
             try:
@@ -154,7 +158,6 @@ def parse_taskcluster_message(payload):
         except TaskclusterFailure as excp:
             log.exception(excp)
             return
-
         graph_data['locales'].append(mar_locale)
         graph_data['mar_urls'][mar_locale] = completeMarUrl
 
@@ -342,8 +345,9 @@ class FunsizeWorker(ConsumerMixin):
         if self.is_tc_message(message):
             # Useful TC data is in message.payload, unlike
             # Buildbot's which is in body['payload']
+            log.debug("Message from Taskcluster: %s (%s)", message.payload, message)
             gdata = parse_taskcluster_message(message.payload)
-            log.info("Message from Taskcluster: %s", gdata)
+            log.info("Parsed message from Taskcluster: %s", gdata)
         else:
             # buildbot routes have wildcards in which adds to the
             # overhead of working out whether it's one of ours. Since
