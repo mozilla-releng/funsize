@@ -291,6 +291,7 @@ class FunsizeWorker(ConsumerMixin):
         # TODO: move to configs
         return [
             u'route.index.project.releng.funsize.level-3.mozilla-central',
+            u'route.index.project.releng.funsize.level-3.mozilla-aurora',
         ]
 
     @property
