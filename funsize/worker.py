@@ -292,6 +292,8 @@ class FunsizeWorker(ConsumerMixin):
         return [
             u'route.index.project.releng.funsize.level-3.mozilla-central',
             u'route.index.project.releng.funsize.level-3.mozilla-aurora',
+            u'route.project.releng.funsize.level-3.mozilla-central',
+            u'route.project.releng.funsize.level-3.mozilla-aurora',
         ]
 
     @property
