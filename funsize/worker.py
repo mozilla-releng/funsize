@@ -389,7 +389,7 @@ class FunsizeWorker(ConsumerMixin):
 
         return any(r in self.tc_routing_keys for r in routes)
 
-    def get_builds(self, product, platform, branch, locale, count=4):
+    def get_builds(self, product, platform, branch, locale, dest_mar, count=4):
         """Find relevant releases in Balrog
         Not all releases have all platforms and locales, due
         to Taskcluster migration.
@@ -412,7 +412,12 @@ class FunsizeWorker(ConsumerMixin):
             try:
                 build_from = self.balrog_client.get_build(
                     release, platform, locale)
-                builds.append(build_from)
+
+                # Balrog may or may not have information about the latest
+                # release already. Don't make partials, as the diff
+                # won't be useful.
+                if build_from != dest_mar:
+                    builds.append(build_from)
             except requests.HTTPError as excp:
                 log.debug("Build %s/%s/%s not found: %s",
                           release, platform, locale, excp)
@@ -441,7 +446,7 @@ class FunsizeWorker(ConsumerMixin):
             to_mar = mar_urls.get(locale)
             log.info("Build to: %s", to_mar)
             latest_releases = self.get_builds(
-                product, platform, branch, locale, partial_limit)
+                product, platform, branch, locale, to_mar, partial_limit)
             for update_number, build_from in enumerate(latest_releases, start=1):
                 log.info("Build from: %s", build_from)
                 try:
@@ -449,14 +454,6 @@ class FunsizeWorker(ConsumerMixin):
                 except ValueError as excp:
                     log.error("Unable to extract fileUrl from %s: %s",
                               build_from, excp)
-                    continue
-
-                if to_mar == from_mar:
-                    # Balrog may or may not have information about the latest
-                    # release already. Don't make partials, as the diff
-                    # won't be useful.
-                    log.debug(
-                        "From and To MARs are the same, skipping.")
                     continue
 
                 tasks[update_number].append({
