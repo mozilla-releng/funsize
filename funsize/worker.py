@@ -418,7 +418,7 @@ class FunsizeWorker(ConsumerMixin):
                 # Balrog may or may not have information about the latest
                 # release already. Don't make partials, as the diff
                 # won't be useful.
-                if build_from != dest_mar:
+                if build_from['completes'][0]['fileUrl'] != dest_mar:
                     builds.append(build_from)
             except requests.HTTPError as excp:
                 log.debug("Build %s/%s/%s not found: %s",
