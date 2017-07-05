@@ -36,6 +36,20 @@ BUILDERS = [
 ]
 
 
+def find_gecko_revision_task(tasks):
+    log.info("Looking for gecko revision in %s", tasks)
+    queue = tc_Queue()
+    for task_id in tasks:
+        try:
+            previous_definition = queue.task(task_id)
+            if previous_definition['payload']['env']['GECKO_HEAD_REV']:
+                return task_id
+        except TaskclusterFailure:
+            log.exception("Unable to load task definition for %s", task_id)
+        except KeyError:
+            log.info("skipping %s", task_id)
+
+
 def parse_taskcluster_message(payload):
     """Get the necessary data for funsize, from a TC pulse message
 
@@ -75,7 +89,7 @@ def parse_taskcluster_message(payload):
         log.exception("Unable to load task definition for %s", taskid)
         return
 
-    previous_task = task_definition['dependencies'][0]
+    previous_task = find_gecko_revision_task(task_definition['dependencies'])
 
     try:
         previous_definition = queue.task(previous_task)
