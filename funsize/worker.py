@@ -36,17 +36,24 @@ BUILDERS = [
 ]
 
 
-def find_gecko_revision_task(tasks):
+def find_balrog_props_task(tasks):
     log.info("Looking for gecko revision in %s", tasks)
     queue = tc_Queue()
     for task_id in tasks:
         try:
-            previous_definition = queue.task(task_id)
-            if previous_definition['payload']['env']['GECKO_HEAD_REV']:
-                return task_id
+            task_def = queue.task(task_id)
+            gecko_revision = task_def['payload']['env']['GECKO_HEAD_REV']
+            previous_artifacts = queue.listLatestArtifacts(task_id)
+            props_name = next(a['name'] for a in
+                              previous_artifacts['artifacts']
+                              if 'balrog_props.json' in a['name'])
+            balrog_props = queue.getLatestArtifact(task_id, props_name)
+            log.info("Found gecko revision %s in task %s", gecko_revision,
+                     task_id)
+            return gecko_revision, balrog_props
         except TaskclusterFailure:
             log.exception("Unable to load task definition for %s", task_id)
-        except KeyError:
+        except (KeyError, StopIteration):
             log.info("skipping %s", task_id)
 
 
@@ -89,26 +96,11 @@ def parse_taskcluster_message(payload):
         log.exception("Unable to load task definition for %s", taskid)
         return
 
-    previous_task = find_gecko_revision_task(task_definition['dependencies'])
-
-    try:
-        previous_definition = queue.task(previous_task)
-    except TaskclusterFailure as excp:
-        log.exception("Unable to load task definition for %s", taskid)
+    balrog_data = find_balrog_props_task(task_definition['dependencies'])
+    if not balrog_data:
+        log.warning("Ignoring task %s", taskid)
         return
-
-    # Sadly not available by other means, unless we trust that one of the
-    # pulse routes will remain the same.
-    graph_data['revision'] = previous_definition[
-        'payload']['env']['GECKO_HEAD_REV']
-
-    previous_artifacts = queue.listLatestArtifacts(previous_task)
-
-    # We just need the data from one balrog_props.json, as the
-    # fields we want are all the same.
-    props_name = next(a['name'] for a in previous_artifacts[
-        'artifacts'] if 'balrog_props.json' in a['name'])
-    balrog_props = queue.getLatestArtifact(previous_task, props_name)
+    graph_data['revision'], balrog_props = balrog_data
     log.debug("balrog_props.json: %s", balrog_props)
     try:
         # We don't do Android build partials
