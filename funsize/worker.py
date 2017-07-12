@@ -24,7 +24,7 @@ from funsize.utils import properties_to_dict, revision_to_revision_hash, \
 log = logging.getLogger(__name__)
 
 # TODO: move these to config
-PRODUCTION_BRANCHES = ['mozilla-central', 'mozilla-aurora', 'oak']
+PRODUCTION_BRANCHES = ['mozilla-central', 'mozilla-aurora', 'oak', 'date']
 STAGING_BRANCHES = []
 PLATFORMS = ['linux', 'linux64', 'win32', 'win64', 'macosx64']
 BUILDERS = [
@@ -301,6 +301,7 @@ class FunsizeWorker(ConsumerMixin):
             u'route.project.releng.funsize.level-3.mozilla-central',
             u'route.project.releng.funsize.level-3.mozilla-aurora',
             u'route.project.releng.funsize.level-3.oak',
+            u'route.project.releng.funsize.level-3.date',
         ]
 
     @property
