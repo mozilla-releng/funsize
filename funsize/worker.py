@@ -138,7 +138,12 @@ def parse_taskcluster_message(payload):
         # is valid before continuing, but the builds produce
         # some that aren't listed in locales.locale_alias, such
         # as 'ast'  ('ast_es' is present in the library)
+
+        # Linux path
         if artifact['name'] == 'public/build/update/target.complete.mar':
+            mar_locale = 'en-US'
+        elif artifact['name'] == 'public/build/target.complete.mar':
+            # macosx64 en-US repackage artifact path
             mar_locale = 'en-US'
         else:
             try:
