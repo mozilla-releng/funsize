@@ -437,6 +437,7 @@ class FunsizeWorker(ConsumerMixin):
                 log.debug("Build %s/%s/%s not found: %s",
                           release, platform, locale, excp)
                 continue
+        return builds
 
     def create_partials(self, product, branch, platform, locales, revision,
                         mar_urls, mar_signing_format, chunk_name=1):
