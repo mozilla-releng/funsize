@@ -23,15 +23,15 @@ tasks:
         source: https://github.com/mozilla/funsize
         # Treeherder hashes the names and may override groupSymbol if the
         # name matches other similar task with different update number
-        name: "[funsize] Update generating task (today-{{ update_number }}, chunk {{ chunk_name }}{% if subchunk %}, subchunk {{ subchunk }}{% endif %})"
+        name: "[funsize] Update generating task (today-{{ update_number }}, locale {{ locale_desc }})"
         description: |
           This task generates MAR files and publishes unsigned bits.
 
       routes:
         - tc-treeherder-stage.{{ branch }}.{{ revision_hash }}
         - tc-treeherder.{{ branch }}.{{ revision_hash }}
-        - index.funsize.v1.{{ branch }}.revision.{{ platform }}.{{ revision }}.{{ update_number }}.{{ chunk_name }}{% if subchunk %}_{{ subchunk }}{% endif %}.updates
-        - index.funsize.v1.{{ branch }}.latest.{{ platform }}.{{ update_number }}.{{ chunk_name }}{% if subchunk %}_{{ subchunk }}{% endif %}.updates
+        - index.funsize.v1.{{ branch }}.revision.{{ platform }}.{{ revision }}.{{ update_number }}.{{ locale_desc }}.updates
+        - index.funsize.v1.{{ branch }}.latest.{{ platform }}.{{ update_number }}.{{ locale_desc }}.updates
       extra:
         funsize:
           partials:
@@ -48,8 +48,8 @@ tasks:
           - staging
           - production
         treeherder:
-          symbol: {{ chunk_name }}{% if subchunk %}.{{ subchunk }}{% endif %}g
-          groupSymbol: Update-{{ update_number }}
+          symbol: {{ locale_desc }}
+          groupSymbol: fs-g-{{ update_number }}
           collection:
             opt: true
           machine:
@@ -88,15 +88,15 @@ tasks:
       metadata:
         owner: release+funsize@mozilla.com
         source: https://github.com/mozilla/funsize
-        name: "[funsize] MAR signing task (today-{{ update_number }}, chunk {{ chunk_name }}{% if subchunk %}, subchunk {{ subchunk }}{% endif %})"
+        name: "[funsize] MAR signing task (today-{{ update_number }}, locale {{ locale_desc }})"
         description: |
           This task signs MAR files and publishes signed bits.
 
       routes:
         - tc-treeherder-stage.{{ branch }}.{{ revision_hash }}
         - tc-treeherder.{{ branch }}.{{ revision_hash }}
-        - index.funsize.v1.{{ branch }}.revision.{{ platform }}.{{ revision }}.{{ update_number }}.{{ chunk_name }}{% if subchunk %}_{{ subchunk }}{% endif %}.signing
-        - index.funsize.v1.{{ branch }}.latest.{{ platform }}.{{ update_number }}.{{ chunk_name }}{% if subchunk %}_{{ subchunk }}{% endif %}.signing
+        - index.funsize.v1.{{ branch }}.revision.{{ platform }}.{{ revision }}.{{ update_number }}.{{ locale_desc }}.signing
+        - index.funsize.v1.{{ branch }}.latest.{{ platform }}.{{ update_number }}.{{ locale_desc }}.signing
       extra:
         signing:
           # assert that this signing task was created by the real funsize
@@ -105,8 +105,8 @@ tasks:
           - staging
           - production
         treeherder:
-          symbol: {{ chunk_name }}{% if subchunk %}.{{ subchunk }}{% endif %}s
-          groupSymbol: Update-{{ update_number }}
+          symbol: {{ locale_desc }}
+          groupSymbol: fs-s-{{ update_number }}
           collection:
             opt: true
           machine:
@@ -135,15 +135,15 @@ tasks:
       routes:
         - tc-treeherder-stage.{{ branch }}.{{ revision_hash }}
         - tc-treeherder.{{ branch }}.{{ revision_hash }}
-        - index.funsize.v1.{{ branch }}.revision.{{ platform }}.{{ revision }}.{{ update_number }}.{{ chunk_name }}{% if subchunk %}_{{ subchunk }}{% endif %}.balrog
-        - index.funsize.v1.{{ branch }}.latest.{{ platform }}.{{ update_number }}.{{ chunk_name }}{% if subchunk %}_{{ subchunk }}{% endif %}.balrog
+        - index.funsize.v1.{{ branch }}.revision.{{ platform }}.{{ revision }}.{{ update_number }}.{{ locale_desc }}.balrog
+        - index.funsize.v1.{{ branch }}.latest.{{ platform }}.{{ update_number }}.{{ locale_desc }}.balrog
       extra:
         treeherderEnv:
           - staging
           - production
         treeherder:
-          symbol: {{ chunk_name }}{% if subchunk %}.{{ subchunk }}{% endif %}u
-          groupSymbol: Update-{{ update_number }}
+          symbol: {{ locale_desc }}
+          groupSymbol: fs-u-{{ update_number }}
           collection:
             opt: true
           machine:
@@ -154,7 +154,7 @@ tasks:
       metadata:
         owner: release+funsize@mozilla.com
         source: https://github.com/mozilla/funsize
-        name: "[funsize] Publish to Balrog (today-{{ update_number }}, chunk {{ chunk_name }}{% if subchunk %}, subchunk {{ subchunk }}{% endif %})"
+        name: "[funsize] Publish to Balrog (today-{{ update_number }}, locale {{ locale_desc }})"
         description: |
           This task publishes signed updates to Balrog.
 

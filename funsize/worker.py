@@ -381,7 +381,6 @@ class FunsizeWorker(ConsumerMixin):
             locales=gdata['locales'],
             revision=gdata["revision"],
             mar_urls=gdata['mar_urls'],
-            chunk_name=gdata.get('chunk_name', 1),
             mar_signing_format=gdata['mar_signing_format'],
         )
 
@@ -440,7 +439,7 @@ class FunsizeWorker(ConsumerMixin):
         return builds
 
     def create_partials(self, product, branch, platform, locales, revision,
-                        mar_urls, mar_signing_format, chunk_name=1):
+                        mar_urls, mar_signing_format):
         """Calculates "from" and "to" MAR URLs and calls create_task_graph().
         Currently "from" MAR is 2 releases behind to avoid duplication of
         existing CI partials.
@@ -450,7 +449,6 @@ class FunsizeWorker(ConsumerMixin):
         :param locales: list of locales
         :param revision: revision of the "to" build
         :param mar_urls: dictionary of {locale:mar file url} for each locale
-        :param chunk_name: chunk name
         """
         # TODO: move limit to config
         partial_limit = 4
@@ -479,22 +477,24 @@ class FunsizeWorker(ConsumerMixin):
                 })
 
         for update_number in tasks:
-            for subchunk, extra in enumerate(chunked(tasks[update_number], per_chunk), start=1):
+            for extra in chunked(tasks[update_number], per_chunk):
                 all_locales = [e["locale"] for e in extra]
                 log.info("New Funsize task for %s", all_locales)
+                locale_desc = "_".join(all_locales)
+                locale_desc = locale_desc.replace('-', '_')
                 self.submit_task_graph(
                     branch=branch, revision=revision, platform=platform,
-                    update_number=update_number, chunk_name=chunk_name,
-                    extra=extra, subchunk=subchunk,
+                    update_number=update_number,
+                    extra=extra, locales=locale_desc,
                     mar_signing_format=mar_signing_format)
 
     def submit_task_graph(self, branch, revision, platform, update_number,
-                          chunk_name, subchunk, extra, mar_signing_format):
+                          locale_desc, extra, mar_signing_format):
         graph_id = slugId()
         log.info("Submitting a new graph %s", graph_id)
         task_graph = self.from_template(
             extra=extra, update_number=update_number, platform=platform,
-            chunk_name=chunk_name, subchunk=subchunk, revision=revision,
+            locale_desc=locale_desc, revision=revision,
             branch=branch, mar_signing_format=mar_signing_format)
         log.debug("Graph definition: %s", task_graph)
         res = self.scheduler.createTaskGraph(graph_id, task_graph)
@@ -502,7 +502,7 @@ class FunsizeWorker(ConsumerMixin):
         return graph_id
 
     def from_template(self, platform, revision, branch, update_number,
-                      chunk_name, subchunk, extra, mar_signing_format):
+                      locale_desc, extra, mar_signing_format):
         """Reads and populates graph template.
 
         :param platform: buildbot platform (linux, macosx64)
@@ -535,14 +535,13 @@ class FunsizeWorker(ConsumerMixin):
             "encryptEnvVar": encryptEnvVar_wrapper,
             "revision": revision,
             "branch": branch,
+            "locale_desc": locale_desc,
             "treeherder_platform": buildbot_to_treeherder(platform),
             "revision_hash": revision_to_revision_hash(self.th_api_root,
                                                        branch, revision),
             "update_number": update_number,
             "extra_balrog_submitter_params": extra_balrog_submitter_params,
             "extra": extra,
-            "chunk_name": chunk_name,
-            "subchunk": subchunk,
             "sign_task": partial(sign_task, pvt_key=self.pvt_key),
             "mar_signing_format": mar_signing_format,
         }

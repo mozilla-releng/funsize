@@ -7,7 +7,7 @@ from . import PVT_KEY
 
 class TestFunsizeWorkerFromTemplate(TestCase):
 
-    def generate_task_graph(self, branch, subchunk=None):
+    def generate_task_graph(self, branch):
         balrog_client = BalrogClient("api_root",
                                      ["balrog_user", "balrog_password"])
         s3_info = {"s3_bucket": "b",
@@ -29,7 +29,7 @@ class TestFunsizeWorkerFromTemplate(TestCase):
             ]
             tg = w.from_template(
                 platform="win32", revision="1234", branch=branch,
-                update_number=1, chunk_name=1, extra=extra, subchunk=subchunk,
+                update_number=1, locale_desc='en-CA', extra=extra,
                 mar_signing_format="mar_sha384")
             return tg
 
@@ -62,15 +62,10 @@ class TestFunsizeWorkerFromTemplate(TestCase):
         payload = tg["tasks"][2]["task"]["payload"]
         self.assertIsNone(payload["env"].get("EXTRA_BALROG_SUBMITTER_PARAMS"))
 
-    def test_subchunk_None(self):
+    def test_symbol_creation(self):
         tg = self.generate_task_graph("branch")
         symbol = tg["tasks"][1]["task"]["extra"]["treeherder"]["symbol"]
-        self.assertEqual(symbol, "1s")
-
-    def test_subchunk_not_None(self):
-        tg = self.generate_task_graph("branch", 2)
-        symbol = tg["tasks"][1]["task"]["extra"]["treeherder"]["symbol"]
-        self.assertEqual(symbol, "1.2s")
+        self.assertEqual(symbol, "en-CA")
 
     def test_mar_signing_format(self):
         """Ensure MAR signing format"""
