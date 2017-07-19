@@ -485,7 +485,7 @@ class FunsizeWorker(ConsumerMixin):
                 self.submit_task_graph(
                     branch=branch, revision=revision, platform=platform,
                     update_number=update_number,
-                    extra=extra, locales=locale_desc,
+                    extra=extra, locale_desc=locale_desc,
                     mar_signing_format=mar_signing_format)
 
     def submit_task_graph(self, branch, revision, platform, update_number,
