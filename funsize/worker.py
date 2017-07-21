@@ -284,6 +284,16 @@ class FunsizeWorker(ConsumerMixin):
             'build.{branch}-{platform}-l10n-nightly-8.*.finished',
             'build.{branch}-{platform}-l10n-nightly-9.*.finished',
             'build.{branch}-{platform}-l10n-nightly-10.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-11.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-12.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-13.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-14.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-15.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-16.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-17.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-18.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-19.*.finished',
+            'build.{branch}-{platform}-l10n-nightly-20.*.finished',
         ]
         return [job.format(branch=branch, platform=platform)
                 for job in jobs
