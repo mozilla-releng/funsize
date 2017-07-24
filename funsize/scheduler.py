@@ -33,8 +33,8 @@ def main():
     balrog_worker_api_root = os.environ.get(
         "BALROG_WORKER_API_ROOT", config["balrog"]["worker_api_root"])
     auth = (
-        os.environ.get("BALROG_USERNAME", config["balrog"]["username"]),
-        os.environ.get("BALROG_PASSWORD", config["balrog"]["password"]),
+        os.environ.get("BALROG_USERNAME", config["balrog"].get("username")),
+        os.environ.get("BALROG_PASSWORD", config["balrog"].get("password")),
     )
     pulse_user = os.environ.get("PULSE_USERNAME", config["pulse"]["user"])
     pulse_password = os.environ.get("PULSE_PASSWORD",

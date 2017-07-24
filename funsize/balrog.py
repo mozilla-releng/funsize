@@ -28,9 +28,13 @@ def _retry_on_http_errors(url, auth, verify, params, errors):
 
 class BalrogClient(object):
 
-    def __init__(self, api_root, auth, cert=None):
+    def __init__(self, api_root, auth=None, cert=None):
         self.api_root = api_root
-        self.auth = auth
+        if auth:
+            self.auth = auth
+        else:
+            self.auth = (None, None)
+
         if cert:
             self.verify = cert
         else:
