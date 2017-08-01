@@ -64,7 +64,7 @@ tasks:
         createdForUser: release+funsize@mozilla.com
 
       payload:
-        image: 'mozillareleases/funsize-update-generator@sha256:fd906acfeca27adda96d60366050e14523220de51598ed525f9ac29f406f46ba'
+        image: 'mozillareleases/funsize-update-generator@sha256:8e1b9387e44a843d96a780dcbb34fdb293e595c91e285e44db05847f20c8ace7'
         maxRunTime: 7200
         command:
           - /runme.sh
@@ -167,7 +167,7 @@ tasks:
         createdForUser: release+funsize@mozilla.com
 
       payload:
-        image: 'mozillareleases/funsize-balrog-submitter@sha256:8c4667524ae05825127b7831dafb42d824e252a359aaf1a1904c317b17806424'
+        image: 'mozillareleases/funsize-balrog-submitter@sha256:722dbad1f3715f4c0c56be83b3c618a4206306a44bde59fa67d85829632f8703'
         maxRunTime: 3600
         command:
           - /runme.sh
