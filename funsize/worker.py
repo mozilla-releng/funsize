@@ -36,6 +36,33 @@ BUILDERS = [
 ]
 
 
+def find_all_signing_formats(tasks):
+    log.info("Looking for signing formats in %s", tasks)
+    queue = tc_Queue()
+    for task_id in tasks:
+        try:
+            task_def = queue.task(task_id)
+            for scope in task_def['scopes']:
+                formats = [s.split(":")[-1] for s in task_def["scopes"] if
+                           s.startswith("project:releng:signing:format:")]
+                if len(formats) > 0:
+                    return formats
+        except TaskclusterFailure:
+            log.exception('Unable to load task definition for %s', task_id)
+        except (KeyError, StopIteration):
+            log.info("skipping %s", task_id)
+
+
+def get_default_signing_format(tasks):
+    formats = find_all_signing_formats(tasks)
+    priority_list = ['mar_sha384', 'mar']
+    for fmt in priority_list:
+        if fmt in formats:
+            return fmt
+
+    return 'mar'
+
+
 def find_balrog_props_task(tasks):
     log.info("Looking for gecko revision in %s", tasks)
     queue = tc_Queue()
@@ -76,7 +103,6 @@ def parse_taskcluster_message(payload):
     those will be balrog_props.json, which will contain the appName,
     platform and branch
     """
-
     graph_data = dict()
     graph_data['locales'] = list()
     graph_data['mar_urls'] = dict()
@@ -102,6 +128,9 @@ def parse_taskcluster_message(payload):
         return
     graph_data['revision'], balrog_props = balrog_data
     log.debug("balrog_props.json: %s", balrog_props)
+
+    default_signing_format = get_default_signing_format(task_definition['dependencies'])
+
     try:
         # We don't do Android build partials
         if 'Fennec' in balrog_props['properties']['appName']:
@@ -114,7 +143,7 @@ def parse_taskcluster_message(payload):
             graph_data['platform'] = balrog_props['properties']['stage_platform']
         graph_data['branch'] = balrog_props['properties']['branch']
         graph_data['mar_signing_format'] = balrog_props[
-            'properties'].get('mar_signing_format', 'mar')
+            'properties'].get('mar_signing_format', default_signing_format)
     except KeyError as excp:
         # android builds don't appear to have the right fields, so log error but
         # not exception
