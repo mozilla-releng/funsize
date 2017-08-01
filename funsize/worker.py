@@ -36,31 +36,29 @@ BUILDERS = [
 ]
 
 
-def find_all_signing_formats(tasks):
-    log.info("Looking for signing formats in %s", tasks)
+def find_all_signing_formats(task):
+    log.info("Looking for signing formats in %s", task)
     queue = tc_Queue()
-    for task_id in tasks:
-        try:
-            task_def = queue.task(task_id)
-            for scope in task_def['scopes']:
-                formats = [s.split(":")[-1] for s in task_def["scopes"] if
-                           s.startswith("project:releng:signing:format:")]
-                if len(formats) > 0:
-                    return formats
-        except TaskclusterFailure:
-            log.exception('Unable to load task definition for %s', task_id)
-        except (KeyError, StopIteration):
-            log.info("skipping %s", task_id)
+    formats = []
+    try:
+        task_def = queue.task(task)
+        formats = [s.split(":")[-1] for s in task_def["scopes"] if
+                   s.startswith("project:releng:signing:format:")]
+    except TaskclusterFailure:
+        log.exception('Unable to load task definition for %s', task)
+    except (KeyError, StopIteration):
+        log.info("skipping %s", task)
+    return formats
 
 
-def get_default_signing_format(tasks):
-    formats = find_all_signing_formats(tasks)
+def get_default_signing_format(task):
+    formats = find_all_signing_formats(task)
     priority_list = ['mar_sha384', 'mar']
     for fmt in priority_list:
         if fmt in formats:
             return fmt
 
-    return 'mar'
+    return 'mar_sha384'
 
 
 def find_balrog_props_task(tasks):
@@ -129,7 +127,7 @@ def parse_taskcluster_message(payload):
     graph_data['revision'], balrog_props = balrog_data
     log.debug("balrog_props.json: %s", balrog_props)
 
-    default_signing_format = get_default_signing_format(task_definition['dependencies'])
+    default_signing_format = get_default_signing_format(taskid)
 
     try:
         # We don't do Android build partials
