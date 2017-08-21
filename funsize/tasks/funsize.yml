@@ -50,6 +50,7 @@ tasks:
         treeherder:
           symbol: {{ locale_desc }}
           groupSymbol: fs-g-{{ update_number }}
+          groupName: "Funsize partial MAR on demand"
           collection:
             opt: true
           machine:
@@ -108,6 +109,7 @@ tasks:
         treeherder:
           symbol: {{ locale_desc }}
           groupSymbol: fs-s-{{ update_number }}
+          groupName: "Funsize partial signing"
           collection:
             opt: true
           machine:
@@ -145,6 +147,7 @@ tasks:
         treeherder:
           symbol: {{ locale_desc }}
           groupSymbol: fs-u-{{ update_number }}
+          groupName: "Funsize partial balrog updates"
           collection:
             opt: true
           machine:
