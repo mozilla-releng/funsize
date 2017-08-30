@@ -67,7 +67,7 @@ def main():
 
     cert = config["balrog"].get("cert")
     balrog_client = BalrogClient(api_root=api_root, auth=auth, cert=cert)
-    scheduler = taskcluster.Scheduler(tc_opts)
+    tc_queue = taskcluster.Queue(tc_opts)
     with open(config["signing"]["pvt_key"]) as f:
         pvt_key = f.read()
 
@@ -78,7 +78,7 @@ def main():
                       bb_exchange=config["pulse"]["bb_exchange"],
                       tc_exchange=config["pulse"]["tc_exchange"],
                       balrog_client=balrog_client,
-                      scheduler=scheduler, s3_info=s3_info,
+                      tc_queue=tc_queue, s3_info=s3_info,
                       th_api_root=th_api_root,
                       balrog_worker_api_root=balrog_worker_api_root,
                       pvt_key=pvt_key).run()

@@ -16,7 +16,7 @@ class TestFunsizeWorkerFromTemplate(TestCase):
         w = FunsizeWorker(connection=None,
                           bb_exchange="bb_exchange",
                           tc_exchange="tc_exchange",
-                          queue_name="qname", scheduler="scheduler",
+                          queue_name="qname", tc_queue="tc_queue",
                           balrog_client=balrog_client, s3_info=s3_info,
                           th_api_root="https://localhost/api",
                           balrog_worker_api_root="http://balrog/api",
@@ -30,26 +30,27 @@ class TestFunsizeWorkerFromTemplate(TestCase):
             tg = w.from_template(
                 platform="win32", revision="1234", branch=branch,
                 update_number=1, locale_desc='en-CA', extra=extra,
-                mar_signing_format="mar_sha384")
+                mar_signing_format="mar_sha384", task_group_id="tgid",
+                atomic_task_id="atomic_id")
             return tg
 
     def test_deps1(self):
         """Second task should require first task"""
         tg = self.generate_task_graph("branch")
-        self.assertEqual(tg["tasks"][1]["requires"][0],
+        self.assertEqual(tg["tasks"][1]["task"]["dependencies"][0],
                          tg["tasks"][0]["taskId"])
 
     def test_deps2(self):
         """Third task should require second task"""
         tg = self.generate_task_graph("branch")
-        self.assertEqual(tg["tasks"][2]["requires"][0],
+        self.assertEqual(tg["tasks"][2]["task"]["dependencies"][0],
                          tg["tasks"][1]["taskId"])
 
     @skipUnless(STAGING_BRANCHES, "No staging branches")
     def test_staging_branch(self):
         branch = STAGING_BRANCHES[0]
         tg = self.generate_task_graph(branch)
-        payload = tg["tasks"][2]["task"]["payload"]
+        payload = tg["tasks"][3]["task"]["payload"]
         self.assertEqual(
             payload["env"]["EXTRA_BALROG_SUBMITTER_PARAMS"],
             "--dummy"
@@ -59,15 +60,15 @@ class TestFunsizeWorkerFromTemplate(TestCase):
     def test_production_branch(self):
         branch = PRODUCTION_BRANCHES[0]
         tg = self.generate_task_graph(branch)
-        payload = tg["tasks"][2]["task"]["payload"]
+        payload = tg["tasks"][3]["task"]["payload"]
         self.assertIsNone(payload["env"].get("EXTRA_BALROG_SUBMITTER_PARAMS"))
 
     def test_symbol_creation(self):
         tg = self.generate_task_graph("branch")
-        symbol = tg["tasks"][1]["task"]["extra"]["treeherder"]["symbol"]
+        symbol = tg["tasks"][2]["task"]["extra"]["treeherder"]["symbol"]
         self.assertEqual(symbol, "en-CA")
 
     def test_mar_signing_format(self):
         """Ensure MAR signing format"""
         tg = self.generate_task_graph("branch")
-        assert 'project:releng:signing:format:mar_sha384' in tg["tasks"][1]["task"]["scopes"]
+        assert 'project:releng:signing:format:mar_sha384' in tg["tasks"][2]["task"]["scopes"]

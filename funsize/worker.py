@@ -266,14 +266,14 @@ def parse_buildbot_message(payload):
 class FunsizeWorker(ConsumerMixin):
 
     def __init__(self, connection, queue_name, bb_exchange, tc_exchange,
-                 balrog_client, scheduler, s3_info, th_api_root,
+                 balrog_client, tc_queue, s3_info, th_api_root,
                  balrog_worker_api_root, pvt_key):
         """Funsize consumer worker
         :type connection: kombu.Connection
         :param queue_name: Full queue name, including queue/<user> prefix
         :type exchange: basestring
         :type balrog_client: funsize.balrog.BalrogClient
-        :type scheduler: taskcluster.Scheduler
+        :type queue: taskcluster.Queue
         """
         self.connection = connection
         # Using passive mode is important, otherwise pulse returns 403
@@ -281,7 +281,7 @@ class FunsizeWorker(ConsumerMixin):
         self.tc_exchange = Exchange(tc_exchange, type='topic', passive=True)
         self.queue_name = queue_name
         self.balrog_client = balrog_client
-        self.scheduler = scheduler
+        self.tc_queue = tc_queue
         self.s3_info = s3_info
         self.th_api_root = th_api_root
         self.balrog_worker_api_root = balrog_worker_api_root
@@ -527,19 +527,35 @@ class FunsizeWorker(ConsumerMixin):
 
     def submit_task_graph(self, branch, revision, platform, update_number,
                           locale_desc, extra, mar_signing_format):
-        graph_id = slugId()
-        log.info("Submitting a new graph %s", graph_id)
+        task_group_id = slugId()
+        atomic_task_id = slugId()
+        log.info("Submitting a new graph %s", task_group_id)
         task_graph = self.from_template(
             extra=extra, update_number=update_number, platform=platform,
             locale_desc=locale_desc, revision=revision,
-            branch=branch, mar_signing_format=mar_signing_format)
+            branch=branch, mar_signing_format=mar_signing_format,
+            task_group_id=task_group_id, atomic_task_id=atomic_task_id)
         log.debug("Graph definition: %s", task_graph)
-        res = self.scheduler.createTaskGraph(graph_id, task_graph)
-        log.info("Result was: %s", res)
-        return graph_id
+        for t in task_graph["tasks"]:
+            log.info("Submitting %s", t["taskId"])
+            self.tc_queue.createTask(t["taskId"], t["task"])
+        # The "atomic submission" task is resolved only on successful
+        # submission of all tasks and unblocks the rest of the tasks.
+        log.info("Resolving atomic task %s", atomic_task_id)
+        self.resolve_task(atomic_task_id)
+        return task_group_id
+
+    def resolve_task(self, task_id, worker_id="funsize"):
+        curr_status = self.tc_queue.status(task_id)
+        run_id = curr_status['status']['runs'][-1]['runId']
+        payload = {"workerGroup": curr_status['status']['workerType'],
+                   "workerId": worker_id}
+        self.tc_queue.claimTask(task_id, run_id, payload)
+        self.tc_queue.reportCompleted(task_id, run_id)
 
     def from_template(self, platform, revision, branch, update_number,
-                      locale_desc, extra, mar_signing_format):
+                      locale_desc, extra, mar_signing_format, task_group_id,
+                      atomic_task_id):
         """Reads and populates graph template.
 
         :param platform: buildbot platform (linux, macosx64)
@@ -581,6 +597,8 @@ class FunsizeWorker(ConsumerMixin):
             "extra": extra,
             "sign_task": partial(sign_task, pvt_key=self.pvt_key),
             "mar_signing_format": mar_signing_format,
+            "task_group_id": task_group_id,
+            "atomic_task_id": atomic_task_id,
         }
         with open(template_file) as f:
             template = Template(f.read(), undefined=StrictUndefined)
