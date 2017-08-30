@@ -7,7 +7,6 @@ tasks:
       workerType: "human-decision"
       created: "{{ now }}"
       deadline: '{{ fromNow("24 hours") }}'
-      expires: '{{ fromNow("7 days") }}'
       priority: "high"
       payload:
         description: "required"
@@ -24,7 +23,6 @@ tasks:
         - "{{ atomic_task_id }}"
       created: '{{ now }}'
       deadline: '{{ fromNow("24 hours") }}'
-      expires: '{{ fromNow("7 days") }}'
       metadata:
         owner: release+funsize@mozilla.com
         source: https://github.com/mozilla/funsize
@@ -95,7 +93,6 @@ tasks:
         - '{{ stableSlugId("update_generator_task") }}'
       created: '{{ now }}'
       deadline: '{{ fromNow("24 hours") }}'
-      expires: '{{ fromNow("7 days") }}'
       metadata:
         owner: release+funsize@mozilla.com
         source: https://github.com/mozilla/funsize
