@@ -9,6 +9,8 @@ Funsize
     :target: https://coveralls.io/r/mozilla/funsize
 
 
+*This scheduler is no longer used. See in-tree for the funsize/partials generation.*
+
 Funsize schedules partial update generation for Firefox nightly and aurora
 builds. Funsize is managed by `puppet
 <http://hg.mozilla.org/build/puppet/file/default/modules/funsize_scheduler>`_.
